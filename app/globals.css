@@ -1,0 +1,52 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&family=Playfair+Display:wght@400;600;700&display=swap');
+@import url('https://fonts.cdnfonts.com/css/garet');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    /* Set the deep charcoal studio background */
+    @apply bg-[#0D0D0D] text-[#F5F5F4] font-['Inter'] antialiased;
+    overflow-x: hidden;
+  }
+  
+  /* Gold selection color for that premium touch */
+  ::selection {
+    @apply bg-[#D4AF37] text-black;
+  }
+
+  /* Premium Slim Scrollbar - Antique Gold theme */
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #0D0D0D;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #262626; /* Dark gray initially */
+    border-radius: 10px;
+    border: 1px solid #D4AF37; /* Thin gold border on thumb */
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #D4AF37; /* Turns gold on hover */
+  }
+}
+
+@layer utilities {
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 5px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(212, 175, 55, 0.1);
+    border-radius: 20px;
+    border: none;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(212, 175, 55, 0.3);
+  }
+}
