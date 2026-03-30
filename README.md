@@ -2,8 +2,6 @@
 
 DealDost AI is a premium, cinematic SaaS platform designed to transform complex deal-making into a seamless, AI-powered experience. Built for precision and trust, it bridges the gap from initial idea to final legally-binding contract.
 
-![DealDost AI Branding](https://raw.githubusercontent.com/omprakash-sahu-code/DealDost-AI/main/public/branding.png) *(Note: Placeholder for actual branding image)*
-
 ## 🌟 Key Features
 
 ### 1. Cinematic Entry & Hero Animation
