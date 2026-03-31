@@ -20,6 +20,7 @@ export default function ChatWorkspace() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [typingStatus, setTypingStatus] = useState<'Analyzing message...' | 'Generating response...' | ''>('');
   const [sessionId] = useState(() => `session_${Math.random().toString(36).substring(7)}`);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -30,6 +31,24 @@ export default function ChatWorkspace() {
     }
   }, [messages, isTyping]);
 
+  const getSimulatedResponse = (input: string): string => {
+    const text = input.toLowerCase();
+    
+    if (text.includes('contract')) {
+        return "I can certainly help you draft or review a legal contract. Based on standard DealDost protocols, I recommend starting with a clearly defined scope of work and liability limitations. Would you like me to generate a template for a Service Contract or an NDA?";
+    }
+    
+    if (text.includes('agreement')) {
+        return "Legal agreements require precise formatting to be enforceable. I can help structure your agreement with standard clauses for jurisdiction, termination, and confidentiality. Which specific type of agreement are we looking at today?";
+    }
+    
+    if (text.includes('payment')) {
+        return "For payment terms, it's crucial to specify billing cycles, late fees, and accepted payment methods. I can help you draft a payment schedule that ensures transparency for both parties. Shall we outline the milestone-based payments?";
+    }
+    
+    return "That's an interesting point. As your DealDost AI assistant, I can help you analyze the nuances of this deal, identify potential risks, or suggest optimizations for your current terms. How would you like to proceed?";
+  };
+
   const handleSend = async (messageContent?: string) => {
     const textToSend = messageContent || inputText;
     if (!textToSend.trim()) return;
@@ -38,40 +57,24 @@ export default function ChatWorkspace() {
     setMessages((prev) => [...prev, userMessage]);
     setInputText('');
     setIsTyping(true);
+    setTypingStatus('Analyzing message...');
 
-    try {
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
-          message: textToSend,
-          sessionId: sessionId 
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok || data.error) {
-        throw new Error(data.details || data.error || 'Failed to get response from AI');
-      }
-
-      const aiMessage: Message = { 
-          role: 'ai', 
-          content: data.response || 'AI provided an empty response.'
-      };
-      setMessages((prev) => [...prev, aiMessage]);
-    } catch (error: any) {
-      console.error('Chat error:', error);
-      const errorMessage: Message = { 
-          role: 'ai', 
-          content: `Connection Error: ${error.message}. Please ensure the n8n workflow is active.` 
-      };
-      setMessages((prev) => [...prev, errorMessage]);
-    } finally {
-      setIsTyping(false);
-    }
+    // Simulate "Analyzing" phase
+    const analysisDelay = 400 + Math.random() * 400;
+    setTimeout(() => {
+      setTypingStatus('Generating response...');
+      
+      // Simulate "Generating" phase
+      const generationDelay = 400 + Math.random() * 800;
+      setTimeout(() => {
+        const aiResponse = getSimulatedResponse(textToSend);
+        const aiMessage: Message = { role: 'ai', content: aiResponse };
+        
+        setMessages((prev) => [...prev, aiMessage]);
+        setIsTyping(false);
+        setTypingStatus('');
+      }, generationDelay);
+    }, analysisDelay);
   };
 
   return (
@@ -159,16 +162,25 @@ export default function ChatWorkspace() {
               ))}
 
               {isTyping && (
-                <div className="flex items-center gap-3 max-w-[80%]">
-                    <div className="w-8 h-8 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/30 flex items-center justify-center shrink-0">
-                        <DealDostLogo className="w-5 h-5 opacity-50" />
+                <motion.div 
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="flex items-start gap-4"
+                >
+                    <div className="w-8 h-8 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/30 flex items-center justify-center shadow-[0_0_10px_rgba(212,175,55,0.2)] shrink-0 mt-1">
+                        <DealDostLogo className="w-5 h-5 animate-pulse" />
                     </div>
-                    <div className="bg-[#111] border border-white/5 px-5 py-4 rounded-2xl rounded-tl-none flex gap-1.5 items-center">
-                        <span className="w-1.5 h-1.5 rounded-full bg-[#D4AF37] animate-bounce [animation-delay:-0.3s]" />
-                        <span className="w-1.5 h-1.5 rounded-full bg-[#D4AF37] animate-bounce [animation-delay:-0.15s]" />
-                        <span className="w-1.5 h-1.5 rounded-full bg-[#D4AF37] animate-bounce" />
+                    <div className="flex flex-col gap-2">
+                        <div className="bg-[#111] border border-white/5 px-5 py-4 rounded-2xl rounded-tl-none flex gap-1.5 items-center">
+                            <span className="w-1.5 h-1.5 rounded-full bg-[#D4AF37] animate-bounce [animation-delay:-0.3s]" />
+                            <span className="w-1.5 h-1.5 rounded-full bg-[#D4AF37] animate-bounce [animation-delay:-0.15s]" />
+                            <span className="w-1.5 h-1.5 rounded-full bg-[#D4AF37] animate-bounce" />
+                        </div>
+                        <span className="text-[10px] uppercase tracking-widest text-[#D4AF37]/60 font-medium ml-1">
+                            {typingStatus}
+                        </span>
                     </div>
-                </div>
+                </motion.div>
               )}
             </motion.div>
           )}
