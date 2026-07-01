@@ -151,6 +151,16 @@ graph LR
 
 ## 💾 Data Models & Schemes
 
+### 0. Database Configuration
+- **Database Engine**: MongoDB Atlas (Free Tier M0)
+- **Driver**: `mongoose`
+- **Connection Logic**: Singleton cached connection defined in `lib/db.ts` designed to prevent connection pool exhaustion during Next.js hot reloads and Vercel lambda invocations.
+- **Core Models**:
+  - `User`: Tracks identity and preferences (e.g. AI tone).
+  - `Conversation`: Saves chat history and cumulative `IExtractedTerms`.
+  - `Contract`: Saves finalized contract strings and structured editable sections.
+  - `ActivityLog`: Tracks history events with a 90-day TTL index.
+
 ### 1. Services Schema
 Services structure is located in [data/services.ts](file:///F:/Project/DealDost_AI/data/services.ts).
 - `legalServices`: List of options containing service titles, descriptions, price values, list features, and reliability ratings (represented on a 5.0 scale).
