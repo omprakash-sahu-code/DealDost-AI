@@ -1,18 +1,19 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import HeroCanvasAnimation from '@/components/HeroCanvasAnimation';
-import ServiceShowcase from '@/components/ServiceShowcase';
-import ProcessFeatures from '@/components/ProcessFeatures';
-import FinalCTA from '@/components/FinalCTA';
-import Navbar from '@/components/Navbar';
-import AuthModal from '@/components/AuthModal';
-import Workspace from '@/components/Workspace';
+import HeroCanvasAnimation from '@/components/landing/HeroCanvasAnimation';
+import ServiceShowcase from '@/components/landing/ServiceShowcase';
+import ProcessFeatures from '@/components/landing/ProcessFeatures';
+import FinalCTA from '@/components/landing/FinalCTA';
+import Navbar from '@/components/landing/Navbar';
+import AuthModal from '@/components/auth/AuthModal';
+import { useRouter } from 'next/navigation';
 
 export default function Home() {
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('signup');
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const router = useRouter();
 
   const openAuthModal = (mode: 'login' | 'signup') => {
     setAuthMode(mode);
@@ -59,16 +60,17 @@ export default function Home() {
               </p>
             </footer>
           </motion.div>
-        ) : (
-          <Workspace key="workspace" onLogout={() => setIsLoggedIn(false)} />
-        )}
+        ) : null}
       </AnimatePresence>
       
       {/* 5. AUTH MODAL */}
       <AuthModal 
         isOpen={isAuthOpen}
         onClose={() => setIsAuthOpen(false)}
-        onSuccess={() => setIsLoggedIn(true)}
+        onSuccess={() => {
+          setIsLoggedIn(true);
+          router.push('/dashboard/chat');
+        }}
         initialMode={authMode}
       />
     </main>

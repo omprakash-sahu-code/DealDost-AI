@@ -1,7 +1,7 @@
 'use client';
 import { useRef, useEffect, useState } from 'react';
 import { motion, useScroll, useTransform, useSpring, MotionValue, useAnimation } from 'framer-motion';
-import DealDostLogo from './DealDostLogo';
+import DealDostLogo from '@/components/shared/DealDostLogo';
 
 const TOTAL_FRAMES = 240; 
 const FRAME_PATH = '/frames'; 

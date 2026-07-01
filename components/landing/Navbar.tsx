@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { motion, useScroll, useSpring, AnimatePresence } from 'framer-motion';
-import DealDostLogo from './DealDostLogo';
+import DealDostLogo from '@/components/shared/DealDostLogo';
 
 export default function Navbar({ onOpenAuth }: { onOpenAuth: (mode: 'login'|'signup') => void }) {
   const { scrollYProgress } = useScroll();

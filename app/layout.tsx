@@ -1,8 +1,6 @@
 import type { Metadata } from 'next';
 import { Inter, Playfair_Display, Syne } from 'next/font/google';
 import './globals.css';
-import SmoothScroll from '@/components/SmoothScroll';
-
 const inter = Inter({
   subsets: ['latin'],
   variable: '--font-inter',
@@ -35,9 +33,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${inter.variable} ${playfair.variable} ${syne.variable}`}>
       <body className="bg-deal-onyx text-deal-silk antialiased selection:bg-deal-gold selection:text-black">
-        <SmoothScroll>
-          {children}
-        </SmoothScroll>
+        {children}
       </body>
     </html>
   );
