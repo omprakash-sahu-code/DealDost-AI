@@ -18,6 +18,19 @@ A fully functional, glassmorphic dashboard for managing active legal tasks, AI i
 
 ---
 
+## 🚀 What's Coming in v2 (Currently in Progress)
+
+DealDost AI is actively being upgraded to a full-stack, production-ready SaaS. The v2 roadmap includes:
+
+- **Full Next.js App Router Architecture**: Transitioned to a scalable, route-based dashboard (`/dashboard/chat`, `/dashboard/contracts`, etc.).
+- **MongoDB Atlas Integration**: Persistent database storage for user profiles, generated contracts, and transaction history.
+- **Robust Authentication**: Replacing UI mockups with a secure authentication flow.
+- **Gemini Flash 2.0 Integration**: Upgraded AI engine utilizing structured JSON outputs for reliable, parse-able contract detail extraction.
+- **Dynamic Contract Generation**: A backend engine capable of seamlessly generating NDAs, MSAs, and Freelance Agreements.
+- **Advanced Export & History**: Interactive PDF exports, document management, and AI-driven document reviews securely tied to the database.
+
+---
+
 ## 🚀 Tech Stack
 
 - **Framework**: [Next.js 14](https://nextjs.org/) (App Router)
