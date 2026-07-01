@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useAuth } from '@/hooks/useAuth';
 
 type AuthMode = 'login' | 'signup';
 
@@ -16,13 +17,16 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialMode = 's
   const [mode, setMode] = useState<AuthMode>(initialMode);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
   const [error, setError] = useState('');
   const [isAuthenticating, setIsAuthenticating] = useState(false);
+  const { login, register } = useAuth();
 
   // Sync initial mode when opened
   useEffect(() => {
     if (isOpen) {
       setMode(initialMode);
+      setName('');
       setEmail('');
       setPassword('');
       setError('');
@@ -58,21 +62,35 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialMode = 's
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !password) {
-      setError('Please fill in both email and password.');
+    if (!email || !password || (mode === 'signup' && !name)) {
+      setError('Please fill in all fields.');
       return;
     }
     setError('');
     setIsAuthenticating(true);
     
-    // Basic validation passed, simulate success
-    setTimeout(() => {
-      setIsAuthenticating(false);
+    try {
+      if (mode === 'login') {
+        await login({ email, password });
+      } else {
+        await register({ name, email, password });
+      }
+      
       onClose();
       if (onSuccess) onSuccess();
-    }, 1200); // 1.2s delay for entry animation to feel real
+    } catch (err: any) {
+      if (err.errors) {
+        // If there are Zod field errors, grab the first one to show
+        const firstError = Object.values(err.errors)[0] as string[];
+        setError(firstError[0] || 'Invalid input.');
+      } else {
+        setError(err.message || 'Authentication failed. Please try again.');
+      }
+    } finally {
+      setIsAuthenticating(false);
+    }
   };
 
   const toggleMode = () => {
@@ -153,6 +171,28 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialMode = 's
                   transition={{ duration: 0.3 }}
                 >
                   <form onSubmit={handleSubmit} className="flex flex-col gap-4 font-['Inter']">
+                    {/* Name Input (Signup only) */}
+                    {mode === 'signup' && (
+                      <motion.div 
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="flex flex-col gap-1.5"
+                      >
+                        <label className="text-xs font-semibold text-white/70 uppercase tracking-wider ml-1">
+                          Name
+                        </label>
+                        <input
+                          type="text"
+                          value={name}
+                          onChange={(e) => setName(e.target.value)}
+                          placeholder="Jane Doe"
+                          className="w-full bg-white/[0.06] border border-white/10 rounded-xl px-4 py-3 text-[#EDEDED] text-sm placeholder:text-white/20 focus:outline-none focus:border-[#D4AF37] focus:shadow-[0_0_15px_rgba(212,175,55,0.2)] transition-all duration-300"
+                          required={mode === 'signup'}
+                        />
+                      </motion.div>
+                    )}
+
                     {/* Email Input */}
                     <div className="flex flex-col gap-1.5">
                       <label className="text-xs font-semibold text-white/70 uppercase tracking-wider ml-1">

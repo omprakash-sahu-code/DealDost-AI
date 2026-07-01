@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
 import { Inter, Playfair_Display, Syne } from 'next/font/google';
 import './globals.css';
+import { AuthProvider } from "@/context/AuthContext";
+
 const inter = Inter({
   subsets: ['latin'],
   variable: '--font-inter',
@@ -33,7 +35,9 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${inter.variable} ${playfair.variable} ${syne.variable}`}>
       <body className="bg-deal-onyx text-deal-silk antialiased selection:bg-deal-gold selection:text-black">
-        {children}
+        <AuthProvider>
+          {children}
+        </AuthProvider>
       </body>
     </html>
   );

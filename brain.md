@@ -76,8 +76,13 @@ DealDost_AI/
 
 ### 1. View & Session Management
 The core runtime state separates the public landing site from the authenticated dashboard via route groups:
-1. **Landing Page (`/`)**: Displays the cinematic scroll-driven landing page. When a user logs in via `AuthModal`, they are redirected to `/dashboard/chat`.
+1. **Landing Page (`/`)**: Displays the cinematic scroll-driven landing page. When a user logs in via `AuthModal`, they are authenticated and redirected to `/dashboard/chat`.
 2. **Dashboard Routes (`/dashboard/*`)**: Loads the specific workspace based on the URL (e.g., `/dashboard/chat`, `/dashboard/contracts`), all wrapped in a shared layout containing the `Sidebar`.
+
+**Authentication Flow:**
+- Next.js Edge Middleware (`middleware.ts`) protects all `/api/*` and `/dashboard/*` routes.
+- JWT tokens are signed using `jose` (Edge-compatible) and stored securely in an HTTP-only cookie named `dealdost_token` with `SameSite=lax`.
+- Global React state is managed via `<AuthProvider>` ([context/AuthContext.tsx](file:///F:/Project/DealDost_AI/context/AuthContext.tsx)), which exposes the `useAuth` hook providing the active `User` object, `login()`, `register()`, and `logout()` functions to UI components.
 
 ---
 

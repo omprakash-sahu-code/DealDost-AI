@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { User, Shield, Sliders, Bell, Mail, Lock, Camera, ChevronRight, Globe, ShieldCheck } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
 
 type SettingsTab = 'profile' | 'account' | 'security' | 'preferences' | 'notifications';
 
@@ -17,6 +18,14 @@ export default function SettingsWorkspace() {
   const [activeTab, setActiveTab] = useState<SettingsTab>('profile');
   const [is2FAEnabled, setIs2FAEnabled] = useState(false);
   const [contractTone, setContractTone] = useState<'strict' | 'balanced' | 'flexible'>('balanced');
+  const { user } = useAuth();
+
+  const getInitials = (name: string) => {
+    if (!name) return 'DD';
+    const parts = name.split(' ');
+    if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+    return name.substring(0, 2).toUpperCase();
+  };
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -92,7 +101,7 @@ export default function SettingsWorkspace() {
                       <div className="relative group">
                         <div className="w-24 h-24 rounded-full bg-gradient-to-tr from-[#D4AF37] to-[#8C7323] p-0.5 shadow-[0_0_25px_rgba(212,175,55,0.15)] transition-shadow duration-500 group-hover:shadow-[0_0_40px_rgba(212,175,55,0.25)]">
                           <div className="w-full h-full rounded-full bg-[#0D0D0D] flex items-center justify-center overflow-hidden">
-                            <span className="text-2xl font-bold text-[#D4AF37]">JD</span>
+                            <span className="text-2xl font-bold text-[#D4AF37]">{user ? getInitials(user.name) : 'DD'}</span>
                           </div>
                         </div>
                         <button className="absolute bottom-0 right-0 p-2 rounded-full bg-[#D4AF37] text-black shadow-lg hover:scale-110 transition-transform">
@@ -109,7 +118,7 @@ export default function SettingsWorkspace() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="space-y-2">
                         <label className="text-xs font-bold text-[#D4AF37] uppercase tracking-widest pl-1">Full Name</label>
-                        <input type="text" defaultValue="Jane Doe" className="w-full bg-white/[0.05] border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-[#D4AF37]/50 focus:shadow-[0_0_15px_rgba(212,175,55,0.1)] transition-all" />
+                        <input type="text" defaultValue={user?.name || ''} className="w-full bg-white/[0.05] border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-[#D4AF37]/50 focus:shadow-[0_0_15px_rgba(212,175,55,0.1)] transition-all" />
                       </div>
                       <div className="space-y-2">
                         <label className="text-xs font-bold text-[#D4AF37] uppercase tracking-widest pl-1">Role / Profession</label>
@@ -119,7 +128,7 @@ export default function SettingsWorkspace() {
                         <label className="text-xs font-bold text-[#D4AF37] uppercase tracking-widest pl-1">Email Address</label>
                         <div className="relative">
                           <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#A3A3A3]" />
-                          <input type="email" defaultValue="jane@dealdost.ai" className="w-full bg-white/[0.05] border border-white/10 rounded-xl pl-11 pr-4 py-3 text-sm text-white focus:outline-none focus:border-[#D4AF37]/50 focus:shadow-[0_0_15px_rgba(212,175,55,0.1)] transition-all" />
+                          <input type="email" defaultValue={user?.email || ''} readOnly className="w-full bg-white/[0.05] border border-white/10 rounded-xl pl-11 pr-4 py-3 text-sm text-white/70 focus:outline-none focus:border-[#D4AF37]/50 focus:shadow-[0_0_15px_rgba(212,175,55,0.1)] transition-all cursor-not-allowed" />
                         </div>
                       </div>
                     </div>
