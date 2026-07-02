@@ -142,9 +142,11 @@ graph LR
      - **State Hook**: The logic is encapsulated cleanly in `hooks/useChat.ts` which manages the optimistic UI, message history, and the extracted terms.
    - **Interactive Live Preview**: When the AI successfully extracts the minimum viable fields (Parties, Payment, Scope), the UI maps the extracted JSON to the [generateContractBody](file:///F:/Project/DealDost_AI/data/ContractTemplate.ts) utility to compile a legal agreement dynamically. The resulting paper preview is rendered side-by-side on the right.
      - **Two-Phase Workflow**: It uses a Draft Preview mode where users can read the contract and inject special instructions via an 'Add Notes' side-panel, which the AI then incorporates when generating the finalized, formatted legal document.
-2. **Contract Workspace ([ContractWorkspace.tsx](file:///F:/Project/DealDost_AI/components/ContractWorkspace.tsx))**:
-   - Allows users to select standard categories (NDA, MSA, Freelance, Rental Lease).
-   - Generates mock documents using template text fields with a loading spinner simulated over `2500ms`.
+2. **Contract Workspace ([ContractWorkspace.tsx](file:///f:/Project/DealDost_AI/components/dashboard/ContractWorkspace.tsx))**:
+   - Allows users to select standard categories (NDA, MSA, Freelance, Rental Lease) and describe the deal parameters in natural language.
+   - Integrates with the backend (`useContracts`) to connect with MongoDB and Gemini AI to generate real, legally structured contracts.
+   - Leverages a cinematic full-screen loading overlay with rotating legal seals and cycling status text.
+   - Transitions to a full-screen scrollable document preview sheet with a sticky top toolbar for downloading PDFs, copying to clipboard, returning to edit the inputs, and editing sections inline.
 3. **Docs Workspace ([DocsWorkspace.tsx](file:///F:/Project/DealDost_AI/components/DocsWorkspace.tsx))**:
    - Manages generated contracts. Currently showcases an empty-state floating doc stack with redirection links back to the AI chat interface.
 4. **History Workspace ([HistoryWorkspace.tsx](file:///F:/Project/DealDost_AI/components/HistoryWorkspace.tsx))**:

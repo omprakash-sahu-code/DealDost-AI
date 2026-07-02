@@ -39,7 +39,7 @@ const StampPaperHeader = () => (
 
 export default function ChatWorkspace() {
   const { messages, sendMessage, isLoading, error, extractedTerms, conversationId } = useChat();
-  const { generateContract, isGenerating: isGeneratingContract, activeContract, setActiveContract, error: contractError } = useContracts();
+  const { generateContract, updateContract, isGenerating: isGeneratingContract, isSaving, activeContract, setActiveContract, error: contractError } = useContracts();
   const [inputText, setInputText] = useState('');
   
   // Contract Preview State
@@ -109,19 +109,25 @@ export default function ChatWorkspace() {
     setEditContent(section.content);
   };
 
-  const saveEditing = () => {
-    if (!activeContract || !editingSectionId) return;
+  const editingSection = activeContract?.content.sections.find((sec: any) => sec.id === editingSectionId);
+  const isDirty = editingSection && editingSection.content !== editContent;
+
+  const saveEditing = async () => {
+    if (!activeContract || !editingSectionId || !isDirty) {
+      setEditingSectionId(null);
+      return;
+    }
     
     const updatedSections = activeContract.content.sections.map((sec: any) => 
       sec.id === editingSectionId ? { ...sec, content: editContent } : sec
     );
 
-    setActiveContract({
-      ...activeContract,
-      content: { ...activeContract.content, sections: updatedSections }
-    });
-
-    setEditingSectionId(null);
+    try {
+      await updateContract(activeContract._id, { sections: updatedSections });
+      setEditingSectionId(null);
+    } catch (err) {
+      console.error('Failed to save section edits', err);
+    }
   };
 
   const isContractVisible = !!extractedTerms && (extractedTerms.confidence >= 0.8 || extractedTerms.missingFields?.length === 0);
@@ -399,9 +405,27 @@ export default function ChatWorkspace() {
                                                         onChange={(e) => setEditContent(e.target.value)}
                                                         className="w-full h-32 bg-white border border-[#D4AF37]/50 rounded-lg p-4 text-sm text-black focus:outline-none focus:border-[#D4AF37] font-serif shadow-inner"
                                                     />
-                                                    <div className="flex justify-end gap-2">
-                                                        <button onClick={() => setEditingSectionId(null)} className="px-4 py-1.5 text-xs text-black/50 hover:text-black">Cancel</button>
-                                                        <button onClick={saveEditing} className="px-4 py-1.5 bg-[#D4AF37] text-black text-xs font-bold rounded hover:bg-[#E5C048]">Save</button>
+                                                    <div className="flex justify-end gap-2 mt-2">
+                                                        <button 
+                                                            onClick={() => setEditingSectionId(null)} 
+                                                            className="px-4 py-1.5 text-xs text-black/50 hover:text-black disabled:opacity-50"
+                                                            disabled={isSaving}
+                                                        >
+                                                            Cancel
+                                                        </button>
+                                                        <button 
+                                                            onClick={saveEditing} 
+                                                            disabled={!isDirty || isSaving}
+                                                            className="px-4 py-1.5 bg-[#D4AF37] text-black text-xs font-bold rounded hover:bg-[#E5C048] disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-all min-w-[80px] justify-center"
+                                                        >
+                                                            {isSaving ? (
+                                                                <><div className="w-3 h-3 border-2 border-black/30 border-t-black rounded-full animate-spin" /> Saving...</>
+                                                            ) : isDirty ? (
+                                                                'Save'
+                                                            ) : (
+                                                                'Saved'
+                                                            )}
+                                                        </button>
                                                     </div>
                                                 </div>
                                             ) : (
