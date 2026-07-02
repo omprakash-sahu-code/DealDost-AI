@@ -140,7 +140,8 @@ graph LR
      - **API Logic**: `lib/gemini.ts` sends a strict System Prompt requesting structured JSON, using OpenAI's chat completions format.
      - **Extracted Fields**: `parties`, `payment`, `deadline`, `scope`, `location`, `confidence`, and `missingFields`.
      - **State Hook**: The logic is encapsulated cleanly in `hooks/useChat.ts` which manages the optimistic UI, message history, and the extracted terms.
-   - **Interactive Live Preview**: When the AI successfully extracts the minimum viable fields (Parties, Payment, Scope) and reaches high confidence with zero missing fields, the UI maps the extracted JSON to the [generateContractBody](file:///F:/Project/DealDost_AI/data/ContractTemplate.ts) utility to compile a legal agreement dynamically. The resulting paper preview is rendered side-by-side on the right.
+   - **Interactive Live Preview**: When the AI successfully extracts the minimum viable fields (Parties, Payment, Scope), the UI maps the extracted JSON to the [generateContractBody](file:///F:/Project/DealDost_AI/data/ContractTemplate.ts) utility to compile a legal agreement dynamically. The resulting paper preview is rendered side-by-side on the right.
+     - **Two-Phase Workflow**: It uses a Draft Preview mode where users can read the contract and inject special instructions via an 'Add Notes' side-panel, which the AI then incorporates when generating the finalized, formatted legal document.
 2. **Contract Workspace ([ContractWorkspace.tsx](file:///F:/Project/DealDost_AI/components/ContractWorkspace.tsx))**:
    - Allows users to select standard categories (NDA, MSA, Freelance, Rental Lease).
    - Generates mock documents using template text fields with a loading spinner simulated over `2500ms`.
@@ -197,9 +198,11 @@ Contract structure is defined in [data/ContractTemplate.ts](file:///F:/Project/D
 
 Exposed in [ExportUtils.ts](file:///F:/Project/DealDost_AI/utils/ExportUtils.ts):
 
-- **`downloadContractPDF(content: string, fileName: string)`**:
+- **`downloadContractPDF(activeContract: any, fileName: string)`**:
   - Initializes `jsPDF` using portrait mode (`p`), millimeters (`mm`), and A4 format.
-  - Spans text fields automatically by converting strings to wrapped lines via `doc.splitTextToSize(content, maxWidth)` (using a 20mm margin threshold).
+  - Generates a bespoke **DealDost Legal Seal** stamp paper header with a "GOVERNMENT OF INDIA" watermark graphic on Page 1, simulating real Indian legal documentation. Subsequent pages receive a standard corporate letterhead.
+  - Spans text fields automatically by parsing the `activeContract.content.sections` and converting strings to wrapped lines via `doc.splitTextToSize(content, maxWidth)`.
+  - Text insertion begins at a `y = 75` offset for the first page (to clear the 55mm stamp header) and `y = 30` for subsequent pages.
   - Measures height margins and triggers new page creation if height index exceeds 280mm:
     ```typescript
     if (y > 280) {

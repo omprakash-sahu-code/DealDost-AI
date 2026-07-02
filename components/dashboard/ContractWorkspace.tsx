@@ -2,6 +2,37 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useContracts } from '@/hooks/useContracts';
+import { downloadContractPDF } from '@/utils/ExportUtils';
+
+const StampPaperHeader = () => (
+  <div className="border-b-4 border-double border-[#D4AF37] pb-6 mb-8 text-center relative overflow-hidden select-none">
+    {/* Geometric seal watermark */}
+    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-28 h-28 rounded-full border-2 border-dashed border-[#D4AF37]/10 flex items-center justify-center pointer-events-none font-bold text-[6px] tracking-widest text-[#D4AF37]/10 uppercase select-none">
+      DealDost AI Legal
+    </div>
+    
+    <div className="flex justify-between items-center text-[8px] uppercase tracking-widest text-gray-500 font-bold mb-4">
+      <span>GOVERNMENT OF INDIA</span>
+      <span>SPECIAL LEGAL AGREEMENT</span>
+    </div>
+    
+    <div className="border border-[#D4AF37]/30 rounded-xl p-5 bg-[#D4AF37]/5 flex flex-col items-center justify-center relative">
+      <div className="w-20 h-20 rounded-full border-2 border-[#D4AF37]/30 flex items-center justify-center mb-2">
+        <div className="w-16 h-16 rounded-full border border-dashed border-[#D4AF37]/20 flex flex-col items-center justify-center">
+          <span className="text-[7px] uppercase tracking-[0.15em] text-[#8C7323] font-bold leading-tight">DealDost</span>
+          <span className="text-[6px] uppercase tracking-[0.1em] text-[#8C7323] font-bold">Legal Seal</span>
+        </div>
+      </div>
+      <span className="text-[9px] font-bold text-gray-700 font-serif">DealDost Legal Seal</span>
+      
+      <div className="absolute left-4 top-1/2 -translate-y-1/2 text-left font-mono text-[7px] text-gray-400">
+        SEC: DD-2026-AI<br/>
+        REF: {Date.now().toString(16).toUpperCase().substring(0, 8)}
+      </div>
+    </div>
+  </div>
+);
 
 const CONTRACT_TYPES = [
   { id: 'nda', name: 'NDA', desc: 'Non-Disclosure Agreement', icon: 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z' },
@@ -13,8 +44,9 @@ const CONTRACT_TYPES = [
 export default function ContractWorkspace() {
   const [selectedType, setSelectedType] = useState('nda');
   const [description, setDescription] = useState('');
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [preview, setPreview] = useState<string | null>(null);
+  const { generateContract, isGenerating, activeContract, setActiveContract, error } = useContracts();
+  const [editingSectionId, setEditingSectionId] = useState<string | null>(null);
+  const [editContent, setEditContent] = useState('');
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -37,27 +69,34 @@ export default function ContractWorkspace() {
     show: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.22, 1, 0.36, 1] } }
   };
 
-  const handleGenerate = () => {
+  const handleGenerate = async () => {
     if (!description.trim()) return;
-    setIsGenerating(true);
-    setPreview(null);
+    try {
+      await generateContract({ type: selectedType, description });
+    } catch (err) {
+      console.error('Generation failed', err);
+    }
+  };
+
+  const startEditing = (section: any) => {
+    if (!section.editable) return;
+    setEditingSectionId(section.id);
+    setEditContent(section.content);
+  };
+
+  const saveEditing = () => {
+    if (!activeContract || !editingSectionId) return;
     
-    // Simulate generation delay
-    setTimeout(() => {
-      setIsGenerating(false);
-      setPreview(`CONTRACT FOR ${selectedType.toUpperCase()}
-DATED: ${new Date().toLocaleDateString()}
+    const updatedSections = activeContract.content.sections.map((sec: any) => 
+      sec.id === editingSectionId ? { ...sec, content: editContent } : sec
+    );
 
-1. PARTIES
-This agreement is entered into between DealDost (Proprietary Party) and User (Counterparty).
+    setActiveContract({
+      ...activeContract,
+      content: { ...activeContract.content, sections: updatedSections }
+    });
 
-2. TERMS OF AGREEMENT
-Based on described deal parameters: "${description}".
-
-3. CONFIDENTIALITY
-The parties agree to maintain strict confidentiality regarding all information exchanged...
-(Generated Draft - Formal Preview Only)`);
-    }, 2500);
+    setEditingSectionId(null);
   };
 
   return (
@@ -137,35 +176,72 @@ The parties agree to maintain strict confidentiality regarding all information e
 
       {/* RESULT AREA */}
       <AnimatePresence mode="wait">
-        {preview && (
+        {error && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-red-400 mb-4 text-center">
+            {error}
+          </motion.div>
+        )}
+        {activeContract && (
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.98 }}
-            className="w-full bg-[#111] border border-white/5 rounded-2xl p-10 shadow-2xl relative overflow-hidden group"
+            className="w-full bg-[#FAF9F6] text-[#1A1A1A] p-12 md:p-16 shadow-2xl relative overflow-hidden rounded-sm"
           >
-            {/* Design accents */}
-            <div className="absolute top-0 left-0 w-1 h-full bg-[#D4AF37]/30" />
-            
-            <div className="flex items-center justify-between mb-8">
-               <h4 className="text-xs font-mono uppercase tracking-[0.3em] text-[#D4AF37]">Official Preview</h4>
+            {/* Stamp paper dynamic header */}
+            <StampPaperHeader />
+
+            <div className="flex items-center justify-between mb-8 pb-4 border-b border-black/10">
+               <h4 className="text-xs font-mono uppercase tracking-[0.3em] text-[#D4AF37] font-bold">{activeContract.title}</h4>
                <div className="flex gap-2">
-                 <div className="w-2 h-2 rounded-full bg-white/10" />
-                 <div className="w-2 h-2 rounded-full bg-white/10" />
-                 <div className="w-2 h-2 rounded-full bg-white/10" />
+                 <div className="w-2 h-2 rounded-full bg-black/10" />
+                 <div className="w-2 h-2 rounded-full bg-black/10" />
+                 <div className="w-2 h-2 rounded-full bg-black/10" />
                </div>
             </div>
 
-            <pre className="text-white/80 font-mono text-xs md:text-sm leading-relaxed whitespace-pre-wrap selection:bg-[#D4AF37] selection:text-black">
-              {preview}
-            </pre>
+            <div className="text-[#1A1A1A] font-serif text-sm md:text-base leading-relaxed space-y-6">
+              {activeContract.content.sections.map((section: any) => (
+                <div key={section.id} className="relative group/section pb-4 border-b border-white/5 last:border-0">
+                  <h5 className="font-bold text-[#F5F5F4] mb-2 font-['Inter']">{section.title}</h5>
+                  
+                  {editingSectionId === section.id ? (
+                    <div className="flex flex-col gap-3">
+                      <textarea
+                        value={editContent}
+                        onChange={(e) => setEditContent(e.target.value)}
+                        className="w-full h-32 bg-white border border-[#D4AF37]/50 rounded-lg p-4 text-sm text-black focus:outline-none focus:border-[#D4AF37] font-serif shadow-inner"
+                      />
+                      <div className="flex justify-end gap-2">
+                        <button onClick={() => setEditingSectionId(null)} className="px-4 py-1.5 text-xs text-black/50 hover:text-black">Cancel</button>
+                        <button onClick={saveEditing} className="px-4 py-1.5 bg-[#D4AF37] text-black text-xs font-bold rounded hover:bg-[#E5C048]">Save</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="relative group/section">
+                      <p className="whitespace-pre-wrap">{section.content}</p>
+                      {section.editable && (
+                        <button 
+                          onClick={() => startEditing(section)}
+                          className="absolute top-0 right-0 opacity-0 group-hover/section:opacity-100 transition-opacity p-2 text-[#D4AF37] bg-white rounded-md shadow-md"
+                        >
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                          </svg>
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
 
-            <div className="mt-10 pt-6 border-t border-white/5 flex flex-wrap gap-4">
-               <button className="px-6 py-2.5 rounded-lg border border-[#D4AF37]/30 text-[#D4AF37] text-xs font-bold uppercase tracking-widest hover:bg-[#D4AF37]/10 transition-colors">
+            <div className="mt-10 pt-6 border-t border-black/10 flex flex-wrap gap-4">
+               <button 
+                 onClick={() => downloadContractPDF(activeContract, `${activeContract.title.replace(/\s+/g, '_')}.pdf`)}
+                 className="px-6 py-2.5 rounded-lg border border-[#D4AF37]/50 text-[#D4AF37] text-xs font-bold uppercase tracking-widest hover:bg-[#D4AF37]/10 transition-colors"
+               >
                  Download PDF
-               </button>
-               <button className="px-6 py-2.5 rounded-lg border border-white/10 text-white/50 text-xs font-bold uppercase tracking-widest hover:border-white/20 transition-colors">
-                 Edit Clauses
                </button>
             </div>
           </motion.div>

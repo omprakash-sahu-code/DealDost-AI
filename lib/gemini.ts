@@ -1,5 +1,5 @@
 import OpenAI from 'openai';
-import { IMessage } from '@/models/Conversation';
+import { IMessage, IExtractedTerms } from '@/models/Conversation';
 import { GeminiResponse } from '@/types/chat';
 
 const openrouter = new OpenAI({
@@ -91,5 +91,68 @@ export async function extractDealTerms(
   } catch (error) {
     console.error('Failed to parse AI response:', responseText);
     throw new Error('Invalid JSON response from AI');
+  }
+}
+
+const CONTRACT_GENERATION_PROMPT = `
+Generate a professional {{CONTRACT_TYPE}} contract with the following terms:
+{{EXTRACTED_TERMS}}
+
+REQUIREMENTS:
+- Use formal legal language appropriate for Indian contract law.
+- Tone: {{AI_TONE}}
+- Include standard clauses: Scope, Payment, Timeline, Confidentiality, Governing Law, Termination, Dispute Resolution, Entire Agreement.
+- Structure into numbered sections with clear headings.
+- Include signature blocks for both parties.
+- Date: {{CURRENT_DATE}}
+
+OUTPUT:
+Always respond with valid JSON matching this exact schema and NOTHING else (no markdown fences, no extra text):
+{
+  "title": "Contract Title",
+  "sections": [
+    { "id": "1", "title": "1. SCOPE OF SERVICES", "content": "...", "editable": true }
+  ],
+  "fullMarkdown": "The complete contract as a single markdown string"
+}
+`;
+
+export async function generateContractFromTerms(
+  terms: Partial<IExtractedTerms>,
+  contractType: string,
+  userContext: { aiTone: string }
+) {
+  const systemInstruction = CONTRACT_GENERATION_PROMPT
+    .replace('{{CONTRACT_TYPE}}', contractType)
+    .replace('{{EXTRACTED_TERMS}}', JSON.stringify(terms, null, 2))
+    .replace('{{AI_TONE}}', userContext.aiTone)
+    .replace('{{CURRENT_DATE}}', new Date().toLocaleDateString('en-IN'));
+
+  const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
+    { role: 'system', content: 'You are a legal contract generator.' },
+    { role: 'user', content: systemInstruction },
+  ];
+
+  const completion = await openrouter.chat.completions.create({
+    model: process.env.AI_MODEL!,
+    messages,
+    temperature: 0.2, // Very low temperature for structured legal text
+  });
+
+  const responseText = completion.choices[0]?.message?.content || '';
+
+  try {
+    const cleaned = responseText
+      .replace(/^```(?:json)?\s*/i, '')
+      .replace(/\s*```$/i, '')
+      .trim();
+    return JSON.parse(cleaned) as {
+      title: string;
+      sections: { id: string; title: string; content: string; editable: boolean }[];
+      fullMarkdown: string;
+    };
+  } catch (error) {
+    console.error('Failed to parse AI contract response:', responseText);
+    throw new Error('Invalid JSON contract response from AI');
   }
 }
