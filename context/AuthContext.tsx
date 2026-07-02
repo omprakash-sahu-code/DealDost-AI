@@ -8,6 +8,11 @@ export interface User {
   id: string;
   name: string;
   email: string;
+  preferences?: {
+    defaultContractType: 'nda' | 'msa' | 'freelance' | 'rental';
+    aiTone: 'strict' | 'balanced' | 'flexible';
+    language: 'en' | 'hi' | 'hinglish';
+  };
 }
 
 interface AuthContextType {
@@ -16,6 +21,7 @@ interface AuthContextType {
   login: (data: LoginInput) => Promise<void>;
   register: (data: RegisterInput) => Promise<void>;
   logout: () => Promise<void>;
+  refreshUser: () => Promise<void>;
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -25,23 +31,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
 
+  const checkAuth = async () => {
+    try {
+      const res = await fetch('/api/auth/me');
+      if (res.ok) {
+        const data = await res.json();
+        // Backend returns user with Mongoose _id, let's map it to id if needed
+        const mappedUser = {
+          ...data.user,
+          id: data.user._id || data.user.id
+        };
+        setUser(mappedUser);
+      } else {
+        setUser(null);
+      }
+    } catch (error) {
+      setUser(null);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // Check auth status on mount
   useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const res = await fetch('/api/auth/me');
-        if (res.ok) {
-          const data = await res.json();
-          setUser(data.user);
-        } else {
-          setUser(null);
-        }
-      } catch (error) {
-        setUser(null);
-      } finally {
-        setIsLoading(false);
-      }
-    };
     checkAuth();
   }, []);
 
@@ -60,7 +72,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       throw error;
     }
 
-    setUser(result.user);
+    const mappedUser = {
+      ...result.user,
+      id: result.user._id || result.user.id
+    };
+    setUser(mappedUser);
     router.push('/dashboard/chat');
   };
 
@@ -79,7 +95,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       throw error;
     }
 
-    setUser(result.user);
+    const mappedUser = {
+      ...result.user,
+      id: result.user._id || result.user.id
+    };
+    setUser(mappedUser);
     router.push('/dashboard/chat');
   };
 
@@ -89,8 +109,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     router.push('/');
   };
 
+  const refreshUser = async () => {
+    await checkAuth();
+  };
+
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, isLoading, login, register, logout, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );
