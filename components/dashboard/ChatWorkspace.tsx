@@ -3,31 +3,16 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import DealDostLogo from '@/components/shared/DealDostLogo';
-import { DealDetails, generateContractBody } from '@/data/ContractTemplate';
+import { generateContractBody } from '@/data/ContractTemplate';
 import { downloadContractPDF, copyContractToClipboard } from '@/utils/ExportUtils';
-
-interface Message {
-  role: 'user' | 'ai';
-  content: string;
-}
-
-const INITIAL_DEAL_DETAILS: DealDetails = {
-    parties: { sideA: 'Me', sideB: '' },
-    payment: { amount: '', currency: 'INR', terms: 'One-time payment' },
-    deadline: '',
-    scope: ''
-};
+import { useChat } from '@/hooks/useChat';
 
 export default function ChatWorkspace() {
-  const [messages, setMessages] = useState<Message[]>([]);
+  const { messages, sendMessage, isLoading, error, extractedTerms } = useChat();
   const [inputText, setInputText] = useState('');
-  const [isTyping, setIsTyping] = useState(false);
-  const [typingStatus, setTypingStatus] = useState<'Analyzing message...' | 'Generating contract...' | 'Finalizing...' | ''>('');
   
-  // Deal Detection State
-  const [details, setDetails] = useState<DealDetails>(INITIAL_DEAL_DETAILS);
+  // Contract Preview State
   const [contractBody, setContractBody] = useState('');
-  const [isContractVisible, setIsContractVisible] = useState(false);
   const [copyFeedback, setCopyFeedback] = useState(false);
 
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -37,100 +22,30 @@ export default function ChatWorkspace() {
     if (scrollRef.current) {
         scrollRef.current.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
     }
-  }, [messages, isTyping]);
+  }, [messages, isLoading]);
 
   useEffect(() => {
-    // Only generate if we have at least partial info
-    if (details.parties.sideB || details.payment.amount || details.scope) {
-        setContractBody(generateContractBody(details));
+    if (extractedTerms) {
+        // Map Gemini terms back to the simple structure used by generateContractBody template
+        setContractBody(generateContractBody({
+          parties: extractedTerms.parties,
+          payment: { 
+            amount: extractedTerms.payment.amount ? String(extractedTerms.payment.amount) : '', 
+            currency: extractedTerms.payment.currency, 
+            terms: extractedTerms.payment.terms 
+          },
+          deadline: extractedTerms.deadline,
+          scope: extractedTerms.scope
+        }));
     }
-  }, [details]);
-
-  // AI Logic: Extraction and Response
-  const processInput = (input: string) => {
-    const text = input.toLowerCase();
-    const newDetails = { ...details };
-    
-    // 1. Extract Parties (English & Hinglish)
-    const partyMatch = text.match(/(?:for|with|between|saath)\s+([a-z\s]+)(?:\s+for|\s+at|\s+on|\s+till|\s+ko|$)/i);
-    if (partyMatch && partyMatch[1]) {
-        newDetails.parties.sideB = partyMatch[1].trim();
-    }
-
-    // 2. Extract Payment (English & Hinglish)
-    // Matches "5000", "5k", "5000 inr", "5000 rupaye", "5000 rs"
-    const paymentMatch = text.match(/(?:for|at|price|payment|paisa|budget|rupaye|rs)\s*(?:of|is|be)?\s*(\d+k?)\s*(?:rs|rupees|rupaye|inr|usd|\$|bucks)?/i);
-    if (paymentMatch && paymentMatch[1]) {
-        let amt = paymentMatch[1];
-        if (amt.toLowerCase().endsWith('k')) {
-            amt = (parseInt(amt) * 1000).toString();
-        }
-        newDetails.payment.amount = amt;
-    }
-
-    // 3. Extract Scope (English & Hinglish)
-    const scopeKeywords = ['design', 'development', 'writing', 'consulting', 'video', 'editing', 'marketing', 'teaching', 'kaam', 'banane'];
-    scopeKeywords.forEach(keyword => {
-        if (text.includes(keyword)) {
-            // Take the part before "for" or "with" if possible to get a cleaner scope
-            const cleanScope = input.split(/(?:for|with|between|saath|at|price)/i)[0].trim();
-            newDetails.scope = cleanScope || input.trim();
-        }
-    });
-
-    // 4. Extract Deadline (English & Hinglish)
-    // Matches "2 weeks", "Monday", "2 din", "hafta"
-    const deadlineMatch = text.match(/(?:by|deadline|on|till|within|tak|ko)\s+([a-z\s0-9]+)$|([0-9]+\s*(?:days|weeks|months|din|hafta|mahena))/i);
-    if (deadlineMatch) {
-        newDetails.deadline = (deadlineMatch[1] || deadlineMatch[2] || '').trim();
-    }
-
-    setDetails(newDetails);
-
-    // AI Follow-up Logic
-    if (!newDetails.scope) {
-        return "Hey! What kind of work or deal are we talking about? (e.g., 'Web design' or 'Logo banana hai')";
-    }
-    if (!newDetails.parties.sideB) {
-        return "I've noted the project! Who is this deal with? (e.g., 'With Rahul' or 'Amit ke saath')";
-    }
-    if (!newDetails.payment.amount) {
-        return `Got it, a deal with ${newDetails.parties.sideB}. What's the budget or payment amount? (e.g., '5000 rupees')`;
-    }
-    if (!newDetails.deadline) {
-        return "Almost there! What's the deadline for this deal? (e.g., 'In 2 weeks' or 'Monday tak')";
-    }
-    
-    if (newDetails.parties.sideB && newDetails.payment.amount && newDetails.deadline && newDetails.scope) {
-        setIsContractVisible(true);
-        return `Excellent! I've drafted a professional Service Agreement between you and ${newDetails.parties.sideB} for ${newDetails.payment.amount} INR. You can see the live preview on the right. Download the PDF or let me know if you need any changes!`;
-    }
-
-    return "Tell me more about your deal! I need the scope, the parties involved, the budget, and the deadline.";
-  };
+  }, [extractedTerms]);
 
   const handleSend = async (messageContent?: string) => {
     const textToSend = messageContent || inputText;
     if (!textToSend.trim()) return;
 
-    const userMessage: Message = { role: 'user', content: textToSend };
-    setMessages((prev) => [...prev, userMessage]);
     setInputText('');
-    setIsTyping(true);
-    setTypingStatus('Analyzing message...');
-
-    // Simulate AI Multi-step processing
-    setTimeout(() => {
-        setTypingStatus('Generating contract...');
-        setTimeout(() => {
-            const aiResponse = processInput(textToSend);
-            const aiMessage: Message = { role: 'ai', content: aiResponse };
-            
-            setMessages((prev) => [...prev, aiMessage]);
-            setIsTyping(false);
-            setTypingStatus('');
-        }, 800);
-    }, 600);
+    await sendMessage(textToSend);
   };
 
   const handleCopy = async () => {
@@ -141,6 +56,7 @@ export default function ChatWorkspace() {
     }
   };
 
+  const isContractVisible = !!extractedTerms && (extractedTerms.confidence >= 0.8 || extractedTerms.missingFields?.length === 0);
   return (
     <div className="flex w-full h-full bg-[#050505] overflow-hidden">
         
@@ -226,7 +142,7 @@ export default function ChatWorkspace() {
                     </motion.div>
                 ))}
 
-                {isTyping && (
+                {isLoading && (
                     <motion.div 
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -242,7 +158,7 @@ export default function ChatWorkspace() {
                                 <span className="w-1 h-1 rounded-full bg-[#D4AF37] animate-bounce" />
                             </div>
                             <span className="text-[9px] uppercase tracking-widest text-[#D4AF37]/60 font-medium ml-1">
-                                {typingStatus}
+                                Analyzing terms...
                             </span>
                         </div>
                     </motion.div>
@@ -251,6 +167,25 @@ export default function ChatWorkspace() {
             )}
             </AnimatePresence>
         </div>
+
+        {/* ERROR BANNER */}
+        <AnimatePresence>
+          {error && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 10 }}
+              className="absolute bottom-28 left-0 right-0 flex justify-center px-6 z-30"
+            >
+              <div className="w-full max-w-2xl bg-red-500/10 border border-red-500/30 backdrop-blur-xl rounded-xl px-5 py-3 text-red-400 text-xs font-['Inter'] flex items-center gap-3">
+                <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                </svg>
+                <span className="truncate">{error.includes('429') || error.includes('quota') ? 'AI quota exceeded — please wait a moment and try again.' : error}</span>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* INPUT BAR */}
         <div className="absolute bottom-8 left-0 right-0 flex justify-center pointer-events-none px-6">
@@ -270,7 +205,7 @@ export default function ChatWorkspace() {
             />
             <button 
                 onClick={() => handleSend()}
-                disabled={!inputText.trim()}
+                disabled={!inputText.trim() || isLoading}
                 className="w-12 h-12 bg-gradient-to-tr from-[#D4AF37] to-[#8C7323] hover:brightness-125 text-black rounded-2xl transition-all shadow-lg disabled:opacity-50 shrink-0 flex items-center justify-center p-0"
             >
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
@@ -309,7 +244,7 @@ export default function ChatWorkspace() {
                             )}
                         </button>
                         <button 
-                            onClick={() => downloadContractPDF(contractBody, `Deal_with_${details.parties.sideB || 'Unknown'}.pdf`)}
+                            onClick={() => downloadContractPDF(contractBody, `Deal_with_${extractedTerms?.parties.sideB || 'Unknown'}.pdf`)}
                             className="bg-[#D4AF37] hover:bg-[#FFF1BA] px-4 py-2 rounded-lg text-[11px] font-bold text-black transition-all flex items-center gap-2 shadow-[0_4px_15px_rgba(212,175,55,0.3)]"
                         >
                             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg> Export PDF

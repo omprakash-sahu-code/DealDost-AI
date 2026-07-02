@@ -135,13 +135,12 @@ graph LR
 ```
 
 #### Views Details:
-1. **Chat Workspace ([ChatWorkspace.tsx](file:///F:/Project/DealDost_AI/components/ChatWorkspace.tsx))**:
-   - **Regex Extraction Engine**: Parsed inline inside `processInput()`. Extracts key details from informal chat messages (supporting Hinglish/English bilingual syntax like "saath", "paisa", "rupaye", "tak"):
-     - **Parties**: Matches pattern `/(?:for|with|between|saath)\s+([a-z\s]+)/i` (Side B).
-     - **Payment**: Matches money terms (e.g. `5000 rs`, `5k`, `10000 inr`). Converts thousands abbreviation (`k`) to raw integers.
-     - **Deadline**: Matches timeline keywords (e.g. `by Monday`, `within 2 weeks`, `tak`).
-     - **Scope**: Detects service context matching keys like `design`, `development`, `writing`, `banane`, `kaam`.
-   - **Interactive Live Preview**: If partial fields are found, it triggers [generateContractBody](file:///F:/Project/DealDost_AI/data/ContractTemplate.ts) to compile a legal agreement dynamically. The resulting paper preview is rendered side-by-side on the right.
+1. **Chat Workspace ([ChatWorkspace.tsx](file:///F:/Project/DealDost_AI/components/dashboard/ChatWorkspace.tsx))**:
+   - **OpenRouter AI Extraction Engine**: The chat interface is now powered by an integration with OpenRouter using the OpenAI SDK via the `/api/chat` route. It connects to the Gemma 4 26B model (or any model specified in `.env.local`) and handles English and Hinglish seamlessly.
+     - **API Logic**: `lib/gemini.ts` sends a strict System Prompt requesting structured JSON, using OpenAI's chat completions format.
+     - **Extracted Fields**: `parties`, `payment`, `deadline`, `scope`, `location`, `confidence`, and `missingFields`.
+     - **State Hook**: The logic is encapsulated cleanly in `hooks/useChat.ts` which manages the optimistic UI, message history, and the extracted terms.
+   - **Interactive Live Preview**: When the AI successfully extracts the minimum viable fields (Parties, Payment, Scope) and reaches high confidence with zero missing fields, the UI maps the extracted JSON to the [generateContractBody](file:///F:/Project/DealDost_AI/data/ContractTemplate.ts) utility to compile a legal agreement dynamically. The resulting paper preview is rendered side-by-side on the right.
 2. **Contract Workspace ([ContractWorkspace.tsx](file:///F:/Project/DealDost_AI/components/ContractWorkspace.tsx))**:
    - Allows users to select standard categories (NDA, MSA, Freelance, Rental Lease).
    - Generates mock documents using template text fields with a loading spinner simulated over `2500ms`.

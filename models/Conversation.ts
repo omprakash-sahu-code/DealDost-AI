@@ -6,7 +6,7 @@ export interface IExtractedTerms {
     sideB: string;
   };
   payment: {
-    amount: number;
+    amount: number | null;
     currency: string;
     terms: string;
   };
