@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Plus, FileText, Filter, LayoutGrid, List, ChevronLeft, Copy, Download, Trash2, Check, Clock, Shield } from 'lucide-react';
+import { Search, Plus, FileText, Filter, LayoutGrid, List, ChevronLeft, Copy, Download, Trash2, Check, Clock, Shield, Link2 } from 'lucide-react';
 import { useContracts } from '@/hooks/useContracts';
 import { downloadContractPDF, copyContractToClipboard } from '@/utils/ExportUtils';
 
@@ -77,6 +77,7 @@ export default function DocsWorkspace({ onNavigate }: DocsWorkspaceProps) {
   const [viewLayout, setViewLayout] = useState<'grid' | 'list'>('grid');
   const [isLoading, setIsLoading] = useState(true);
   const [copyFeedback, setCopyFeedback] = useState(false);
+  const [shareFeedback, setShareFeedback] = useState(false);
   
   // Section Editing states
   const [editingSectionId, setEditingSectionId] = useState<string | null>(null);
@@ -103,6 +104,24 @@ export default function DocsWorkspace({ onNavigate }: DocsWorkspaceProps) {
     if (success) {
       setCopyFeedback(true);
       setTimeout(() => setCopyFeedback(false), 2000);
+    }
+  };
+
+  const handleShare = async () => {
+    if (!selectedContract) return;
+    try {
+      const res = await fetch(`/api/contracts/${selectedContract._id}/share`, { method: 'POST' });
+      const data = await res.json();
+      if (res.ok && data.isShared) {
+        const shareUrl = `${window.location.origin}/share/${selectedContract._id}`;
+        await navigator.clipboard.writeText(shareUrl);
+        setShareFeedback(true);
+        setTimeout(() => setShareFeedback(false), 3000);
+      } else if (res.ok && !data.isShared) {
+        setShareFeedback(false);
+      }
+    } catch (err) {
+      console.error('Failed to toggle sharing', err);
     }
   };
 
@@ -430,6 +449,26 @@ export default function DocsWorkspace({ onNavigate }: DocsWorkspaceProps) {
               
               <div className="flex gap-2">
                 <button
+                  onClick={handleShare}
+                  className={`px-4 py-2 rounded-lg text-[11px] font-bold transition-all border flex items-center gap-2 ${
+                    shareFeedback
+                      ? 'bg-[#D4AF37]/10 border-[#D4AF37]/30 text-[#D4AF37]'
+                      : 'bg-white/5 hover:bg-white/10 border-white/5 text-white'
+                  }`}
+                >
+                  {shareFeedback ? (
+                    <>
+                      <Check className="w-3.5 h-3.5" />
+                      Link Copied!
+                    </>
+                  ) : (
+                    <>
+                      <Link2 className="w-3.5 h-3.5" />
+                      Share
+                    </>
+                  )}
+                </button>
+                <button
                   onClick={handleCopy}
                   className="bg-white/5 hover:bg-white/10 px-4 py-2 rounded-lg text-[11px] font-bold text-white transition-all border border-white/5 flex items-center gap-2"
                 >
@@ -484,57 +523,80 @@ export default function DocsWorkspace({ onNavigate }: DocsWorkspaceProps) {
                     <h1 className="text-2xl font-bold mb-8 text-center text-black leading-snug">{selectedContract.title}</h1>
                     
                     <div className="text-[#1A1A1A] text-sm md:text-base leading-relaxed space-y-6">
-                      {selectedContract.content.sections.map((section: any) => (
-                        <div key={section.id} className="relative group/section pb-4 border-b border-black/5 last:border-0">
-                          <h5 className="font-bold text-black mb-2 font-['Inter']">{section.title}</h5>
-                          
-                          {editingSectionId === section.id ? (
-                            <div className="flex flex-col gap-3">
-                              <textarea
-                                value={editContent}
-                                onChange={(e) => setEditContent(e.target.value)}
-                                className="w-full h-32 bg-white border border-[#D4AF37]/50 rounded-lg p-4 text-sm text-black focus:outline-none focus:border-[#D4AF37] font-serif shadow-inner"
-                              />
-                              <div className="flex justify-end gap-2 mt-2">
-                                <button 
-                                  onClick={() => setEditingSectionId(null)} 
-                                  className="px-4 py-1.5 text-xs text-black/50 hover:text-black disabled:opacity-50"
-                                  disabled={isSaving}
-                                >
-                                  Cancel
-                                </button>
-                                <button 
-                                  onClick={saveEditing} 
-                                  disabled={!isDirty || isSaving}
-                                  className="px-4 py-1.5 bg-[#D4AF37] text-black text-xs font-bold rounded hover:bg-[#E5C048] disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-all min-w-[80px] justify-center"
-                                >
-                                  {isSaving ? (
-                                    <><div className="w-3 h-3 border-2 border-black/30 border-t-black rounded-full animate-spin" /> Saving...</>
-                                  ) : isDirty ? (
-                                    'Save'
-                                  ) : (
-                                    'Saved'
-                                  )}
-                                </button>
+                      {selectedContract.content.sections
+                        .filter((section: any) => !/signature|witness|execut/i.test(section.title))
+                        .map((section: any) => (
+                          <div key={section.id} className="relative group/section pb-4 border-b border-black/5 last:border-0">
+                            <h5 className="font-bold text-black mb-2 font-['Inter']">{section.title}</h5>
+                            
+                            {editingSectionId === section.id ? (
+                              <div className="flex flex-col gap-3">
+                                <textarea
+                                  value={editContent}
+                                  onChange={(e) => setEditContent(e.target.value)}
+                                  className="w-full h-32 bg-white border border-[#D4AF37]/50 rounded-lg p-4 text-sm text-black focus:outline-none focus:border-[#D4AF37] font-serif shadow-inner"
+                                />
+                                <div className="flex justify-end gap-2 mt-2">
+                                  <button 
+                                    onClick={() => setEditingSectionId(null)} 
+                                    className="px-4 py-1.5 text-xs text-black/50 hover:text-black disabled:opacity-50"
+                                    disabled={isSaving}
+                                  >
+                                    Cancel
+                                  </button>
+                                  <button 
+                                    onClick={saveEditing} 
+                                    disabled={!isDirty || isSaving}
+                                    className="px-4 py-1.5 bg-[#D4AF37] text-black text-xs font-bold rounded hover:bg-[#E5C048] disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-all min-w-[80px] justify-center"
+                                  >
+                                    {isSaving ? (
+                                      <><div className="w-3 h-3 border-2 border-black/30 border-t-black rounded-full animate-spin" /> Saving...</>
+                                    ) : isDirty ? (
+                                      'Save'
+                                    ) : (
+                                      'Saved'
+                                    )}
+                                  </button>
+                                </div>
                               </div>
-                            </div>
-                          ) : (
-                            <div className="relative group/section">
-                              <p className="whitespace-pre-wrap">{section.content}</p>
-                              {section.editable && (
-                                <button 
-                                  onClick={() => startEditing(section)}
-                                  className="absolute top-0 right-0 opacity-0 group-hover/section:opacity-100 transition-opacity p-2 text-[#D4AF37] bg-white rounded-md shadow-md"
-                                >
-                                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                                  </svg>
-                                </button>
-                              )}
-                            </div>
-                          )}
+                            ) : (
+                              <div className="relative group/section">
+                                <p className="whitespace-pre-wrap">{section.content}</p>
+                                {section.editable && (
+                                  <button 
+                                    onClick={() => startEditing(section)}
+                                    className="absolute top-0 right-0 opacity-0 group-hover/section:opacity-100 transition-opacity p-2 text-[#D4AF37] bg-white rounded-md shadow-md"
+                                  >
+                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                                    </svg>
+                                  </button>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                    </div>
+
+                    {/* Premium Signature Blocks on Screen */}
+                    <div className="mt-16 border-t border-black/10 pt-8 font-sans">
+                      <h4 className="text-xs font-bold text-black uppercase tracking-wider text-center mb-8">Signature &amp; Acknowledgement</h4>
+                      <div className="grid grid-cols-2 gap-12 text-[#1A1A1A] max-w-xl mx-auto">
+                        <div className="flex flex-col gap-4">
+                          <span className="text-[9px] uppercase tracking-wider text-black/50 font-bold">Party A (Client)</span>
+                          <span className="text-xs font-bold border-b border-black/20 pb-1 h-7 text-black">
+                            {selectedContract.terms?.parties?.sideA || selectedContract.terms?.parties?.split(/\s+and\s+/i)[0]?.trim() || 'Client'}
+                          </span>
+                          <span className="text-[8px] text-black/40 uppercase tracking-widest font-mono font-semibold">Signature &amp; Date</span>
                         </div>
-                      ))}
+                        <div className="flex flex-col gap-4">
+                          <span className="text-[9px] uppercase tracking-wider text-black/50 font-bold">Party B (Provider)</span>
+                          <span className="text-xs font-bold border-b border-black/20 pb-1 h-7 text-black">
+                            {selectedContract.terms?.parties?.sideB || selectedContract.terms?.parties?.split(/\s+and\s+/i)[1]?.trim() || 'Service Provider'}
+                          </span>
+                          <span className="text-[8px] text-black/40 uppercase tracking-widest font-mono font-semibold">Signature &amp; Date</span>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>

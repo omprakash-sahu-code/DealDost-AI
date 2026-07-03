@@ -31,10 +31,18 @@ export async function POST(req: NextRequest) {
       if (!conversation) {
         return NextResponse.json({ message: 'Conversation not found' }, { status: 404 });
       }
-      if (!conversation.extractedTerms) {
-         return NextResponse.json({ message: 'No extracted terms found in conversation' }, { status: 400 });
+      
+      if (body.terms) {
+        termsToUse = body.terms;
+        conversation.extractedTerms = body.terms;
+        await conversation.save();
+      } else {
+        if (!conversation.extractedTerms) {
+           return NextResponse.json({ message: 'No extracted terms found in conversation' }, { status: 400 });
+        }
+        termsToUse = { ...JSON.parse(JSON.stringify(conversation.extractedTerms)) };
       }
-      termsToUse = { ...JSON.parse(JSON.stringify(conversation.extractedTerms)) };
+      
       // Append user notes if provided alongside the chat-based flow
       if (description) {
         termsToUse.userNotes = description;

@@ -103,7 +103,6 @@ REQUIREMENTS:
 - Tone: {{AI_TONE}}
 - Include standard clauses: Scope, Payment, Timeline, Confidentiality, Governing Law, Termination, Dispute Resolution, Entire Agreement.
 - Structure into numbered sections with clear headings.
-- Include signature blocks for both parties.
 - Date: {{CURRENT_DATE}}
 
 OUTPUT:

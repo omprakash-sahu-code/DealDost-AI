@@ -14,6 +14,7 @@ export interface IContract extends Document {
   title: string;
   type: 'nda' | 'msa' | 'freelance' | 'rental' | 'custom';
   status: 'draft' | 'final' | 'signed' | 'expired';
+  isShared: boolean;
   terms: IExtractedTerms;
   content: {
     markdown: string;
@@ -43,6 +44,7 @@ const contractSchema = new Schema<IContract>(
     title: { type: String, required: true },
     type: { type: String, enum: ['nda', 'msa', 'freelance', 'rental', 'custom'], required: true },
     status: { type: String, enum: ['draft', 'final', 'signed', 'expired'], default: 'draft' },
+    isShared: { type: Boolean, default: false },
     terms: { type: Schema.Types.Mixed, required: true }, // Referencing the extracted terms structure implicitly
     content: {
       markdown: { type: String, default: '' },
