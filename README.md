@@ -1,6 +1,27 @@
-# DealDost AI — Legal Contracts at the Speed of Chat
+<div align="center">
+
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/23b9797a-083a-4ce1-9fbd-85ca5debad4d"
+       width="500"
+       alt="ChatGPT Image Jul 4, 2026, 04_16_22 PM">
+</p>
+
+### Legal Contracts at the Speed of Chat
 
 DealDost AI is a premium, cinematic legal-tech SaaS platform designed to transform informal Hinglish and English business deals into structured, legally-binding contract assets. Built for modern freelancers, creators, and professionals in India, it simplifies legal drafting and negotiations through an intuitive, AI-backed interface.
+<p>
+  <a href="https://deal-dost-ai.vercel.app/">🌐 Live Demo</a> •
+  <a href="./CONTRIBUTING.md">🤝 Contributing</a> •
+  <a href="https://github.com/omprakash-sahu-code/DealDost-AI/issues">🐛 Report Bug</a>
+</p>
+
+<br>
+
+<img src="https://img.shields.io/github/stars/omprakash-sahu-code/DealDost-AI?style=for-the-badge&color=F59E0B">
+<img src="https://img.shields.io/github/forks/omprakash-sahu-code/DealDost-AI?style=for-the-badge">
+<img src="https://img.shields.io/github/last-commit/omprakash-sahu-code/DealDost-AI?style=for-the-badge">
+
+</div>
 
 ---
 
@@ -14,6 +35,25 @@ DealDost AI is a premium, cinematic legal-tech SaaS platform designed to transfo
 - **Production Optimizations**: Integrated local Next.js rate limiters, global React error boundary UI, lazy-loaded workspaces, and HTTP security headers.
 
 ---
+
+## 💼 Tech Stack
+
+<p align="center">
+
+<img src="https://img.shields.io/badge/Next.js-15-black?style=for-the-badge&logo=next.js">
+<img src="https://img.shields.io/badge/React-19-61DAFB?style=for-the-badge&logo=react&logoColor=black">
+<img src="https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white">
+<img src="https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white">
+<img src="https://img.shields.io/badge/GSAP-88CE02?style=for-the-badge&logo=greensock&logoColor=black">
+<img src="https://img.shields.io/badge/MongoDB-47A248?style=for-the-badge&logo=mongodb&logoColor=white">
+<img src="https://img.shields.io/badge/OpenRouter-AI-blueviolet?style=for-the-badge">
+<img src="https://img.shields.io/badge/Gemma-26B-orange?style=for-the-badge">
+<img src="https://img.shields.io/badge/JWT-Authentication-red?style=for-the-badge">
+
+</p>
+
+---
+
 
 ## 🛠️ System Architecture
 
@@ -97,9 +137,30 @@ DealDost_AI/
 
 ## 🤝 Contributing & Local Development
 
-For detail on installing dependencies, setting up local environment variables (`.env.local`), running checks, or opening Pull Requests, please checkout [CONTRIBUTING.md](file:///f:/Project/DealDost_AI/CONTRIBUTING.md).
+For detail on installing dependencies, setting up local environment variables (`.env.local`), running checks, or opening Pull Requests, please checkout [CONTRIBUTING.md](./CONTRIBUTING.md).
 
 ---
 
-## 📜 License
-Created with Precision, Trust, and Speed by the **DealDost AI** team © 2026.
+## ⭐ Support
+
+If you like **DealDost AI** or found it useful, consider supporting the project!
+
+<p>
+  <a href="https://github.com/Omprakash2067/DealDost_AI">
+    <img src="https://img.shields.io/badge/⭐%20Star%20This%20Repo-F59E0B?style=for-the-badge" alt="Star Repo">
+  </a>
+
+  <a href="https://github.com/Omprakash2067/DealDost_AI/fork">
+    <img src="https://img.shields.io/badge/🍴%20Fork%20It-10B981?style=for-the-badge" alt="Fork Repo">
+  </a>
+</p>
+
+---
+
+<p align="center">
+  ⚖️ <b>DealDost AI</b> is an open-source legal-tech platform built for learning, innovation, and real-world impact.
+</p>
+
+<p align="center">
+  Made with ❤️ by <b>DealDost-AI Team</b>. 
+</p>
