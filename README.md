@@ -1,83 +1,105 @@
-# DealDost AI - The Future of Legal-Tech
+# DealDost AI — Legal Contracts at the Speed of Chat
 
-DealDost AI is a premium, cinematic SaaS platform designed to transform complex deal-making into a seamless, AI-powered experience. Built for precision and trust, it bridges the gap from initial idea to final legally-binding contract.
-
-## 🌟 Key Features
-
-### 1. Cinematic Entry & Hero Animation
-An immersive, scroll-triggered experience that scales from a high-fidelity visual concept into a system-activated AI chat interface.
-
-### 2. Idea-to-Contract Catalog
-A comprehensive service showcase highlighting the journey of contract creation, review, and optimization using advanced legal-tech AI.
-
-### 3. AI Balancing & Secure Escrow
-Integrated features for neutral deal balancing and secure transaction management, ensuring both parties are protected.
-
-### 4. Interactive Workspace
-A fully functional, glassmorphic dashboard for managing active legal tasks, AI insights, and collaborative document editing.
+DealDost AI is a premium, cinematic legal-tech SaaS platform designed to transform informal Hinglish and English business deals into structured, legally-binding contract assets. Built for modern freelancers, creators, and professionals in India, it simplifies legal drafting and negotiations through an intuitive, AI-backed interface.
 
 ---
 
-## 🚀 What's Coming in v2 (Currently in Progress)
+## 📅 Version & Release History
 
-DealDost AI is actively being upgraded to a full-stack, production-ready SaaS. The v2 roadmap includes:
-
-- **Full Next.js App Router Architecture**: Transitioned to a scalable, route-based dashboard (`/dashboard/chat`, `/dashboard/contracts`, etc.).
-- **MongoDB Atlas Integration**: Persistent database storage for user profiles, generated contracts, and transaction history.
-- **Robust Authentication**: Replacing UI mockups with a secure authentication flow.
-- **Gemini Flash 2.0 Integration**: Upgraded AI engine utilizing structured JSON outputs for reliable, parse-able contract detail extraction.
-- **Dynamic Contract Generation**: A backend engine capable of seamlessly generating NDAs, MSAs, and Freelance Agreements.
-- **Advanced Export & History**: Interactive PDF exports, document management, and AI-driven document reviews securely tied to the database.
+### **v2.0.0** — *July 4, 2026* (Latest)
+- **Core Database Persistence**: Fully integrated MongoDB Atlas for user sessions, conversation persistence, contracts archiving, and security logging.
+- **OpenRouter AI Integration**: Implemented Gemma 26B AI engine to parse multi-message chats, extract structured deal metadata, and generate legal clauses.
+- **Interactive Terms Checklist**: Overhauled the preview workflow into a checkable terms card dashboard allowing active inline editing and approval before final document generation.
+- **Visual PDF Export**: Styled on-screen signatures and generated standard legal headers, watermarks, and dynamically spaced signature lines for PDFs.
+- **Production Optimizations**: Integrated local Next.js rate limiters, global React error boundary UI, lazy-loaded workspaces, and HTTP security headers.
 
 ---
 
-## 🚀 Tech Stack
+## 🛠️ System Architecture
 
-- **Framework**: [Next.js 14](https://nextjs.org/) (App Router)
-- **Styling**: [Tailwind CSS](https://tailwindcss.com/)
-- **Animations**: [Framer Motion](https://www.framer.com/motion/) & [GSAP](https://greensock.com/gsap/)
-- **Canvas**: Hardware-accelerated cinematic transitions
-- **Typography**: Playfair Display (Serif) & Inter (Sans-serif)
+DealDost AI separates the public cinematic marketing landing page from the secure, authenticated dashboard workspace via Next.js App Router route groups.
 
----
+### Layout Routing Hierarchy
+```mermaid
+graph TD
+    RootLayout[app/layout.tsx] --> LandingGroup["app/(landing)"]
+    RootLayout --> DashboardGroup["app/(dashboard)"]
 
-## 🛠️ Getting Started
+    LandingGroup --> LandingPage["page.tsx (/)"]
+    LandingGroup --> SharedPage["share/[id]/page.tsx (Shared View)"]
 
-First, install the dependencies:
-
-```bash
-npm install
-# or
-yarn install
+    DashboardGroup -->|Auth Guard Middleware| DashRedirect["dashboard/page.tsx (Redirects)"]
+    DashboardGroup --> Chat["/dashboard/chat"]
+    DashboardGroup --> Contracts["/dashboard/contracts"]
+    DashboardGroup --> Docs["/dashboard/documents"]
+    DashboardGroup --> History["/dashboard/history"]
+    DashboardGroup --> Settings["/dashboard/settings"]
 ```
 
-Then, run the development server:
+### Deal-to-Contract Data Flow
+This chart illustrates the request lifecycle when a user initiates a conversation to draft a freelance or NDA contract:
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User as User Interface
+    participant Route as api/chat
+    participant OpenRouter as OpenRouter AI (Gemma)
+    participant DB as MongoDB Atlas
 
-```bash
-npm run dev
-# or
-yarn dev
+    User->>Route: Sends deal outline (e.g. "Draft an NDA for Rahul by Friday")
+    Route->>OpenRouter: Evaluates system prompt, context & message history
+    OpenRouter-->>Route: Returns structured JSON (extracted terms, next question)
+    Route->>DB: Saves conversation log & terms
+    Route-->>User: Renders AI message + live terms checklist sidebar
+    User->>Route: Approves/edits terms -> Clicks "Generate Final Contract"
+    Route->>OpenRouter: Assembles legal clauses matching approved terms
+    OpenRouter-->>Route: Generates markdown sections
+    Route->>DB: Archives contract database record
+    Route-->>User: Renders final contract canvas (PDF-exportable)
 ```
-
-Open [(https://deal-dost-ai.vercel.app/)]with your browser to see the result.
 
 ---
 
-## 📂 Project Structure
+## 📂 Project Directory Structure
 
 ```text
-├── app/                  # Next.js App Router
-├── components/           # Reusable UI components
-│   ├── Hero/             # Cinematic Hero elements
-│   ├── Workspace/        # Glassmorphic AI workspace
-│   └── ...
-├── public/               # Static assets & frame animations
-├── styles/               # Global CSS & theme tokens
-└── tsconfig.json         # TypeScript configuration
+DealDost_AI/
+├── app/
+│   ├── (landing)/              # Cinematic landing pages & shared viewer
+│   ├── (dashboard)/            # Authenticated workspace panel views
+│   ├── api/                    # Serverless API routes (auth, chat, contracts, logs)
+│   ├── error.tsx               # App-level runtime React error boundary
+│   └── layout.tsx              # Root HTML wrapper and global SEO configurations
+├── components/
+│   ├── landing/                # Scroll-triggered canvas animations & navbar
+│   ├── dashboard/              # Workspace logic (Chat, Documents, Settings)
+│   ├── auth/                   # Password login and registration modal overlays
+│   └── shared/                 # DealDost Logo & LoadingSpinner fallback animations
+├── lib/                        # Shared utilities (JWT, db singleton, rate limiter)
+├── models/                     # Mongoose database models (User, Contract, Conversation)
+├── hooks/                      # Custom hooks interfacing API transactions
+├── context/                    # AuthContext managing token validation state
+├── types/                      # TypeScript definitions mapping API models
+├── utils/                      # Client-side helpers (jsPDF formatting, clipboard)
+└── contribution.md             # Code contribution & local development guide
 ```
+
+---
+
+## 🔒 Security & Optimization Patterns
+
+- **JWT Auth & Guard Rails**: Authentication is handled via edge-compatible tokens stored in HTTP-only `dealdost_token` cookies, protected by Next.js `middleware.ts` guards.
+- **In-Memory Rate Limiting**: Throttles critical API access (`/api/chat` at 15 req/min, `/api/auth/login` at 5 req/min) to prevent brute-forcing and token exhaustion.
+- **Workspace Bundle Splitting**: Workspaces are dynamically loaded using `next/dynamic` to ensure rapid initial page load speeds for users entering the dashboard.
+- **Advanced Headers Config**: Leverages HTTP security headers like `X-Frame-Options: DENY` and `X-Content-Type-Options: nosniff` directly via the configuration layer.
+
+---
+
+## 🤝 Contributing & Local Development
+
+For detail on installing dependencies, setting up local environment variables (`.env.local`), running checks, or opening Pull Requests, please checkout [contribution.md](file:///f:/Project/DealDost_AI/contribution.md).
 
 ---
 
 ## 📜 License
-
-Created with Precision, Trust, and Speed by the **Deal-Dost AI** team &copy; 2026.
+Created with Precision, Trust, and Speed by the **DealDost AI** team © 2026.
