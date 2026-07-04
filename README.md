@@ -97,7 +97,7 @@ DealDost_AI/
 
 ## 🤝 Contributing & Local Development
 
-For detail on installing dependencies, setting up local environment variables (`.env.local`), running checks, or opening Pull Requests, please checkout [contribution.md](file:///f:/Project/DealDost_AI/CONTRIBUTING.md).
+For detail on installing dependencies, setting up local environment variables (`.env.local`), running checks, or opening Pull Requests, please checkout [CONTRIBUTING.md](file:///f:/Project/DealDost_AI/CONTRIBUTING.md).
 
 ---
 
