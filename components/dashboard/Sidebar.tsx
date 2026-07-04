@@ -6,6 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import DealDostLogo from '@/components/shared/DealDostLogo';
 import LogoutModal from '@/components/auth/LogoutModal';
+import { useAuth } from '@/hooks/useAuth';
 
 const SIDEBAR_ITEMS = [
   { id: 'chat', label: 'Chat With AI', href: '/dashboard/chat', icon: 'M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z' },
@@ -18,12 +19,19 @@ const SIDEBAR_ITEMS = [
 export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
+  const { user, logout } = useAuth();
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
 
-  const handleLogout = () => {
-    // Phase 2 will implement real logout, for now just redirect to landing
+  const handleLogout = async () => {
     setIsLogoutModalOpen(false);
-    router.push('/');
+    await logout();
+  };
+
+  const getInitials = (name: string) => {
+    if (!name) return 'DD';
+    const parts = name.split(' ');
+    if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+    return name.substring(0, 2).toUpperCase();
   };
 
   return (
@@ -77,10 +85,10 @@ export default function Sidebar() {
             <div className={`w-9 h-9 rounded-full bg-gradient-to-tr from-[#D4AF37] to-[#8C7323] flex items-center justify-center font-bold text-black transition-all ${
               pathname === '/dashboard/settings' ? 'shadow-[0_0_20px_rgba(212,175,55,0.5)] scale-105' : 'shadow-[0_0_10px_rgba(212,175,55,0.3)]'
             }`}>
-              JD
+              {user ? getInitials(user.name) : 'DD'}
             </div>
             <div className="flex flex-col flex-1 overflow-hidden">
-              <span className={`text-sm font-semibold truncate transition-colors ${pathname === '/dashboard/settings' ? 'text-[#D4AF37]' : ''}`}>Jane Doe</span>
+              <span className={`text-sm font-semibold truncate transition-colors ${pathname === '/dashboard/settings' ? 'text-[#D4AF37]' : ''}`}>{user?.name || 'Loading...'}</span>
               <span className="text-[10px] text-[#A3A3A3] uppercase tracking-wider font-mono">Premium Plan</span>
             </div>
             <button 

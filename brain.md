@@ -76,8 +76,13 @@ DealDost_AI/
 
 ### 1. View & Session Management
 The core runtime state separates the public landing site from the authenticated dashboard via route groups:
-1. **Landing Page (`/`)**: Displays the cinematic scroll-driven landing page. When a user logs in via `AuthModal`, they are redirected to `/dashboard/chat`.
+1. **Landing Page (`/`)**: Displays the cinematic scroll-driven landing page. When a user logs in via `AuthModal`, they are authenticated and redirected to `/dashboard/chat`.
 2. **Dashboard Routes (`/dashboard/*`)**: Loads the specific workspace based on the URL (e.g., `/dashboard/chat`, `/dashboard/contracts`), all wrapped in a shared layout containing the `Sidebar`.
+
+**Authentication Flow:**
+- Next.js Edge Middleware (`middleware.ts`) protects all `/api/*` and `/dashboard/*` routes.
+- JWT tokens are signed using `jose` (Edge-compatible) and stored securely in an HTTP-only cookie named `dealdost_token` with `SameSite=lax`.
+- Global React state is managed via `<AuthProvider>` ([context/AuthContext.tsx](file:///F:/Project/DealDost_AI/context/AuthContext.tsx)), which exposes the `useAuth` hook providing the active `User` object, `login()`, `register()`, and `logout()` functions to UI components.
 
 ---
 
@@ -130,16 +135,18 @@ graph LR
 ```
 
 #### Views Details:
-1. **Chat Workspace ([ChatWorkspace.tsx](file:///F:/Project/DealDost_AI/components/ChatWorkspace.tsx))**:
-   - **Regex Extraction Engine**: Parsed inline inside `processInput()`. Extracts key details from informal chat messages (supporting Hinglish/English bilingual syntax like "saath", "paisa", "rupaye", "tak"):
-     - **Parties**: Matches pattern `/(?:for|with|between|saath)\s+([a-z\s]+)/i` (Side B).
-     - **Payment**: Matches money terms (e.g. `5000 rs`, `5k`, `10000 inr`). Converts thousands abbreviation (`k`) to raw integers.
-     - **Deadline**: Matches timeline keywords (e.g. `by Monday`, `within 2 weeks`, `tak`).
-     - **Scope**: Detects service context matching keys like `design`, `development`, `writing`, `banane`, `kaam`.
-   - **Interactive Live Preview**: If partial fields are found, it triggers [generateContractBody](file:///F:/Project/DealDost_AI/data/ContractTemplate.ts) to compile a legal agreement dynamically. The resulting paper preview is rendered side-by-side on the right.
-2. **Contract Workspace ([ContractWorkspace.tsx](file:///F:/Project/DealDost_AI/components/ContractWorkspace.tsx))**:
-   - Allows users to select standard categories (NDA, MSA, Freelance, Rental Lease).
-   - Generates mock documents using template text fields with a loading spinner simulated over `2500ms`.
+1. **Chat Workspace ([ChatWorkspace.tsx](file:///F:/Project/DealDost_AI/components/dashboard/ChatWorkspace.tsx))**:
+   - **OpenRouter AI Extraction Engine**: The chat interface is now powered by an integration with OpenRouter using the OpenAI SDK via the `/api/chat` route. It connects to the Gemma 4 26B model (or any model specified in `.env.local`) and handles English and Hinglish seamlessly.
+     - **API Logic**: `lib/gemini.ts` sends a strict System Prompt requesting structured JSON, using OpenAI's chat completions format.
+     - **Extracted Fields**: `parties`, `payment`, `deadline`, `scope`, `location`, `confidence`, and `missingFields`.
+     - **State Hook**: The logic is encapsulated cleanly in `hooks/useChat.ts` which manages the optimistic UI, message history, and the extracted terms.
+   - **Interactive Live Preview**: When the AI successfully extracts the minimum viable fields (Parties, Payment, Scope), the UI maps the extracted JSON to the [generateContractBody](file:///F:/Project/DealDost_AI/data/ContractTemplate.ts) utility to compile a legal agreement dynamically. The resulting paper preview is rendered side-by-side on the right.
+     - **Two-Phase Workflow**: It uses a Draft Preview mode where users can read the contract and inject special instructions via an 'Add Notes' side-panel, which the AI then incorporates when generating the finalized, formatted legal document.
+2. **Contract Workspace ([ContractWorkspace.tsx](file:///f:/Project/DealDost_AI/components/dashboard/ContractWorkspace.tsx))**:
+   - Allows users to select standard categories (NDA, MSA, Freelance, Rental Lease) and describe the deal parameters in natural language.
+   - Integrates with the backend (`useContracts`) to connect with MongoDB and Gemini AI to generate real, legally structured contracts.
+   - Leverages a cinematic full-screen loading overlay with rotating legal seals and cycling status text.
+   - Transitions to a full-screen scrollable document preview sheet with a sticky top toolbar for downloading PDFs, copying to clipboard, returning to edit the inputs, and editing sections inline.
 3. **Docs Workspace ([DocsWorkspace.tsx](file:///F:/Project/DealDost_AI/components/DocsWorkspace.tsx))**:
    - Manages generated contracts. Currently showcases an empty-state floating doc stack with redirection links back to the AI chat interface.
 4. **History Workspace ([HistoryWorkspace.tsx](file:///F:/Project/DealDost_AI/components/HistoryWorkspace.tsx))**:
@@ -150,6 +157,16 @@ graph LR
 ---
 
 ## 💾 Data Models & Schemes
+
+### 0. Database Configuration
+- **Database Engine**: MongoDB Atlas (Free Tier M0)
+- **Driver**: `mongoose`
+- **Connection Logic**: Singleton cached connection defined in `lib/db.ts` designed to prevent connection pool exhaustion during Next.js hot reloads and Vercel lambda invocations.
+- **Core Models**:
+  - `User`: Tracks identity and preferences (e.g. AI tone).
+  - `Conversation`: Saves chat history and cumulative `IExtractedTerms`.
+  - `Contract`: Saves finalized contract strings and structured editable sections.
+  - `ActivityLog`: Tracks history events with a 90-day TTL index.
 
 ### 1. Services Schema
 Services structure is located in [data/services.ts](file:///F:/Project/DealDost_AI/data/services.ts).
@@ -183,9 +200,11 @@ Contract structure is defined in [data/ContractTemplate.ts](file:///F:/Project/D
 
 Exposed in [ExportUtils.ts](file:///F:/Project/DealDost_AI/utils/ExportUtils.ts):
 
-- **`downloadContractPDF(content: string, fileName: string)`**:
+- **`downloadContractPDF(activeContract: any, fileName: string)`**:
   - Initializes `jsPDF` using portrait mode (`p`), millimeters (`mm`), and A4 format.
-  - Spans text fields automatically by converting strings to wrapped lines via `doc.splitTextToSize(content, maxWidth)` (using a 20mm margin threshold).
+  - Generates a bespoke **DealDost Legal Seal** stamp paper header with a "GOVERNMENT OF INDIA" watermark graphic on Page 1, simulating real Indian legal documentation. Subsequent pages receive a standard corporate letterhead.
+  - Spans text fields automatically by parsing the `activeContract.content.sections` and converting strings to wrapped lines via `doc.splitTextToSize(content, maxWidth)`.
+  - Text insertion begins at a `y = 75` offset for the first page (to clear the 55mm stamp header) and `y = 30` for subsequent pages.
   - Measures height margins and triggers new page creation if height index exceeds 280mm:
     ```typescript
     if (y > 280) {
@@ -193,8 +212,30 @@ Exposed in [ExportUtils.ts](file:///F:/Project/DealDost_AI/utils/ExportUtils.ts)
       y = 20;
     }
     ```
+  - **Dynamic Signature Blocks**: Appends a premium two-column dual-party signature section (Party A & Party B) at the bottom of the document dynamically using `doc.line()` and `doc.text()`, ensuring a polished corporate finish.
+  
+- **On-Screen Contract Rendering**:
+  - Across all workspaces (Chat, Contract, Docs, Shared Page), legacy text-based signatures (e.g., "9. SIGNATURES") generated by AI are dynamically filtered out using Regex `/signature|witness|execut/i.test(section.title)`.
+  - A responsive CSS grid-based `Signature & Acknowledgement` block is appended at the bottom of the preview canvas, precisely mirroring the visual layout of the exported PDF.
+
 - **`copyContractToClipboard(content: string)`**:
   - Interacts with browser clipboard API (`navigator.clipboard.writeText`) returning a promise representing write success/failure.
+
+- **`rateLimit(req: NextRequest, config: RateLimitConfig)`** (Exposed in [rateLimiter.ts](file:///F:/Project/DealDost_AI/lib/rateLimiter.ts)):
+  - IP-based lightweight in-memory sliding window rate limiter designed for Serverless deployments.
+  - Imposed on `/api/chat` (15 req/min) and `/api/auth/login` (5 req/min).
+
+- **Global React Error Boundary** (Exposed in [error.tsx](file:///F:/Project/DealDost_AI/app/error.tsx)):
+  - Captures UI thread runtime crashes and presents a styled Gold-and-Charcoal fallback card prompting recovery.
+
+- **Workspace Lazy Loading**:
+  - All dashboard workspace components are dynamic imported via `next/dynamic` with `<LoadingSpinner>` fallback placeholder.
+
+- **HTTP Security Headers** (Exposed in [next.config.mjs](file:///F:/Project/DealDost_AI/next.config.mjs)):
+  - Global middleware injection: `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `X-XSS-Protection: 1; mode=block`.
+
+- **SEO Metadata Configurations** (Exposed in [layout.tsx](file:///F:/Project/DealDost_AI/app/layout.tsx)):
+  - Built-in full OpenGraph, Twitter, and index crawling configuration templates for Next.js crawler bots.
 
 ---
 

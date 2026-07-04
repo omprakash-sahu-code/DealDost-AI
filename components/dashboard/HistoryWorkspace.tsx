@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { FilePlus, MessageSquare, RefreshCw, Clock, Inbox } from 'lucide-react';
 
@@ -16,28 +17,44 @@ interface HistorySection {
   items: HistoryItem[];
 }
 
-const MOCK_HISTORY: HistorySection[] = [
-  {
-    label: 'Today',
-    items: [
-      { id: '1', type: 'generate', title: 'NDA Generated', description: 'Generated a Non-Disclosure Agreement for "Project X"', timestamp: '2 mins ago' },
-      { id: '2', type: 'chat', title: 'Legal Consultation', description: 'Asked about IP protection clauses in India', timestamp: '1 hour ago' },
-    ]
-  },
-  {
-    label: 'Yesterday',
-    items: [
-      { id: '3', type: 'update', title: 'Contract Updated', description: 'Revised payment milestones for Freelance Agreement', timestamp: 'Yesterday, 4:30 PM' },
-      { id: '4', type: 'generate', title: 'MSA Drafted', description: 'Created a Master Service Agreement for "Studio Alpha"', timestamp: 'Yesterday, 11:15 AM' },
-    ]
-  },
-  {
-    label: 'Earlier',
-    items: [
-      { id: '5', type: 'chat', title: 'Escrow Inquiry', description: 'Discussed secure payment releases with AI', timestamp: 'Mar 25, 2:00 PM' },
-    ]
+const mapAction = (action: string) => {
+  switch (action) {
+    case 'contract_generated':
+      return { type: 'generate' as const, title: 'Contract Generated' };
+    case 'contract_updated':
+      return { type: 'update' as const, title: 'Contract Updated' };
+    case 'contract_exported':
+      return { type: 'generate' as const, title: 'Contract Exported' };
+    case 'chat_started':
+      return { type: 'chat' as const, title: 'Chat Started' };
+    case 'login':
+      return { type: 'chat' as const, title: 'User Login' };
+    case 'settings_updated':
+      return { type: 'update' as const, title: 'Settings Updated' };
+    default:
+      return { type: 'update' as const, title: 'Activity Recorded' };
   }
-];
+};
+
+const formatTimestamp = (dateStr: string) => {
+  const date = new Date(dateStr);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / (1000 * 60));
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+  
+  if (diffMins < 1) return 'Just now';
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  
+  const yesterday = new Date(now);
+  yesterday.setDate(yesterday.getDate() - 1);
+  if (date.toDateString() === yesterday.toDateString()) {
+    return `Yesterday, ${date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`;
+  }
+  
+  return date.toLocaleDateString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+};
 
 const getIcon = (type: HistoryItem['type']) => {
   switch (type) {
@@ -48,6 +65,65 @@ const getIcon = (type: HistoryItem['type']) => {
 };
 
 export default function HistoryWorkspace() {
+  const [sections, setSections] = useState<HistorySection[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadHistory() {
+      try {
+        const res = await fetch('/api/history?limit=50');
+        const data = await res.json();
+        
+        if (res.ok && data.logs) {
+          const grouped = groupLogsByDate(data.logs);
+          setSections(grouped);
+        }
+      } catch (err) {
+        console.error('Failed to load history logs', err);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    loadHistory();
+  }, []);
+
+  const groupLogsByDate = (logs: any[]): HistorySection[] => {
+    const todayItems: HistoryItem[] = [];
+    const yesterdayItems: HistoryItem[] = [];
+    const earlierItems: HistoryItem[] = [];
+    
+    const now = new Date();
+    const yesterday = new Date(now);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    logs.forEach((log) => {
+      const logDate = new Date(log.createdAt);
+      const { type, title } = mapAction(log.action);
+      const item: HistoryItem = {
+        id: log._id,
+        type,
+        title,
+        description: log.description,
+        timestamp: formatTimestamp(log.createdAt)
+      };
+
+      if (logDate.toDateString() === now.toDateString()) {
+        todayItems.push(item);
+      } else if (logDate.toDateString() === yesterday.toDateString()) {
+        yesterdayItems.push(item);
+      } else {
+        earlierItems.push(item);
+      }
+    });
+
+    const result: HistorySection[] = [];
+    if (todayItems.length > 0) result.push({ label: 'Today', items: todayItems });
+    if (yesterdayItems.length > 0) result.push({ label: 'Yesterday', items: yesterdayItems });
+    if (earlierItems.length > 0) result.push({ label: 'Earlier', items: earlierItems });
+    
+    return result;
+  };
+
   const containerVariants = {
     hidden: { opacity: 0 },
     show: {
@@ -69,7 +145,15 @@ export default function HistoryWorkspace() {
     show: { opacity: 1, x: 0, transition: { duration: 0.5, ease: [0.22, 1, 0.36, 1] } }
   };
 
-  if (MOCK_HISTORY.length === 0) {
+  if (isLoading) {
+    return (
+      <div className="flex-1 flex items-center justify-center bg-[#050505] p-8">
+        <div className="w-8 h-8 border-2 border-[#D4AF37]/20 border-t-[#D4AF37] rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (sections.length === 0) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center bg-[#050505] p-8">
         <motion.div 
@@ -105,7 +189,7 @@ export default function HistoryWorkspace() {
           animate="show"
           className="space-y-12"
         >
-          {MOCK_HISTORY.map((section) => (
+          {sections.map((section) => (
             <div key={section.label} className="relative">
               {/* Section Label */}
               <h4 className="text-xs font-bold font-['Inter'] text-[#D4AF37] uppercase tracking-[0.2em] mb-6 pl-10 flex items-center gap-3">
