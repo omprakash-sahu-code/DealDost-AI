@@ -15,21 +15,15 @@ npm install
 ```
 
 ### 2. Configure Environment Variables
-Create a `.env.local` file in the root directory of the project:
-```env
-MONGODB_URI=mongodb+srv://<user>:<password>@cluster.mongodb.net/dealdost
-JWT_SECRET=your-secure-jwt-256-bit-random-secret
-OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
-OPENROUTER_API_KEY=your-openrouter-api-key
-```
-
-### 3. Sync Cinematic Animation Frames (Optional)
-Preload the cinematic landing page scroll frames using:
+Duplicate the provided `.env.example` template to create a `.env.local` file:
 ```bash
-node setup_frames.js
+cp .env.example .env.local
 ```
+Then, configure the required variables. Detailed setup and guides for obtaining each credential can be found in the comments within `.env.example`:
+- **`MONGODB_URI`**: Obtained from your MongoDB Atlas dashboard (Connect -> Drivers).
+- **`OPENROUTER_API_KEY`**: Obtained from your OpenRouter dashboard settings.
 
-### 4. Run Development Server
+### 3. Run Development Server
 ```bash
 npm run dev
 ```
@@ -62,3 +56,20 @@ npm run build
    * `chore(docs): commit message`
 3. **Verify Locally**: Ensure `npm run build` runs successfully with zero compilation or type-safety issues prior to opening a PR.
 4. **Submit PR**: Target the `main` branch. Provide a descriptive breakdown of your changes using our structured PR template.
+
+---
+
+## 🔍 Troubleshooting: MongoDB SRV DNS Issues
+
+If you receive errors like `querySrv ENOTFOUND` or database connection timeouts in your local development terminal when using a `mongodb+srv://` connection string, this is a common DNS resolution issue on local networks/Windows.
+
+### Solution:
+Switch your `MONGODB_URI` in `.env.local` to the standard `mongodb://` protocol by explicitly listing the cluster shard nodes.
+1. In MongoDB Atlas, select **Connect** -> **Connect your application** -> **Drivers**.
+2. Select **Node.js** as the driver and select an older version (e.g., **2.2.12 or earlier**) or choose to show the connection string template listing shards explicitly.
+3. Your connection string format will look like this:
+   ```env
+   MONGODB_URI="mongodb://<user>:<password>@shard-00-00.mongodb.net:27017,shard-00-01.mongodb.net:27017,shard-00-02.mongodb.net:27017/?ssl=true&replicaSet=atlas-shard-0&authSource=admin"
+   ```
+4. List the shard nodes explicitly to bypass DNS SRV queries entirely. Mongoose will connect directly.
+
