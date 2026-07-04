@@ -7,9 +7,30 @@ import { extractDealTerms } from '@/lib/gemini';
 import { IMessage } from '@/models/Conversation';
 import { verifyToken, AUTH_COOKIE_NAME } from '@/lib/auth';
 import { ChatRequest, ChatResponse } from '@/types/chat';
+import { rateLimit } from '@/lib/rateLimiter';
 
 export async function POST(req: NextRequest) {
   try {
+    // 0. Rate limiting (15 requests per minute limit)
+    const rateLimitRes = await rateLimit(req, { limit: 15, windowMs: 60 * 1000 });
+    const headers = {
+      'X-RateLimit-Limit': rateLimitRes.limit.toString(),
+      'X-RateLimit-Remaining': rateLimitRes.remaining.toString(),
+      'X-RateLimit-Reset': rateLimitRes.resetTime.toString(),
+    };
+
+    if (!rateLimitRes.success) {
+      return NextResponse.json(
+        {
+          error: {
+            code: 'TOO_MANY_REQUESTS',
+            message: 'Too many requests. Please wait a minute and try again.',
+          },
+        },
+        { status: 429, headers }
+      );
+    }
+
     // 1. Authenticate user
     const token = req.cookies.get(AUTH_COOKIE_NAME)?.value;
     if (!token) return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
@@ -87,7 +108,13 @@ export async function POST(req: NextRequest) {
   } catch (error: any) {
     console.error('Chat API Error:', error);
     return NextResponse.json(
-      { message: error.message || 'Failed to process chat message' },
+      {
+        message: error.message || 'Failed to process chat message',
+        error: {
+          code: 'CHAT_PROCESSING_ERROR',
+          message: error.message || 'Failed to process chat message',
+        },
+      },
       { status: 500 }
     );
   }

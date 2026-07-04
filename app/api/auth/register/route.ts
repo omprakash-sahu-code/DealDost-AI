@@ -12,8 +12,17 @@ export async function POST(req: Request) {
     // 1. Validate Input
     const validatedData = registerSchema.safeParse(body);
     if (!validatedData.success) {
+      const fieldErrors = validatedData.error.flatten().fieldErrors;
       return NextResponse.json(
-        { message: 'Invalid input', errors: validatedData.error.flatten().fieldErrors },
+        {
+          message: 'Invalid input',
+          errors: fieldErrors,
+          error: {
+            code: 'VALIDATION_ERROR',
+            message: 'Validation failed for request inputs.',
+            details: fieldErrors,
+          },
+        },
         { status: 400 }
       );
     }
@@ -26,7 +35,13 @@ export async function POST(req: Request) {
     const existingUser = await User.findOne({ email: email.toLowerCase() });
     if (existingUser) {
       return NextResponse.json(
-        { message: 'User with this email already exists' },
+        {
+          message: 'User with this email already exists',
+          error: {
+            code: 'EMAIL_ALREADY_EXISTS',
+            message: 'User with this email is already registered.',
+          },
+        },
         { status: 409 }
       );
     }
@@ -70,7 +85,13 @@ export async function POST(req: Request) {
   } catch (error: any) {
     console.error('Registration Error:', error);
     return NextResponse.json(
-      { message: 'Internal server error' },
+      {
+        message: 'Internal server error',
+        error: {
+          code: 'INTERNAL_SERVER_ERROR',
+          message: error.message || 'An unexpected error occurred.',
+        },
+      },
       { status: 500 }
     );
   }

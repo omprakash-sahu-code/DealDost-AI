@@ -221,6 +221,22 @@ Exposed in [ExportUtils.ts](file:///F:/Project/DealDost_AI/utils/ExportUtils.ts)
 - **`copyContractToClipboard(content: string)`**:
   - Interacts with browser clipboard API (`navigator.clipboard.writeText`) returning a promise representing write success/failure.
 
+- **`rateLimit(req: NextRequest, config: RateLimitConfig)`** (Exposed in [rateLimiter.ts](file:///F:/Project/DealDost_AI/lib/rateLimiter.ts)):
+  - IP-based lightweight in-memory sliding window rate limiter designed for Serverless deployments.
+  - Imposed on `/api/chat` (15 req/min) and `/api/auth/login` (5 req/min).
+
+- **Global React Error Boundary** (Exposed in [error.tsx](file:///F:/Project/DealDost_AI/app/error.tsx)):
+  - Captures UI thread runtime crashes and presents a styled Gold-and-Charcoal fallback card prompting recovery.
+
+- **Workspace Lazy Loading**:
+  - All dashboard workspace components are dynamic imported via `next/dynamic` with `<LoadingSpinner>` fallback placeholder.
+
+- **HTTP Security Headers** (Exposed in [next.config.mjs](file:///F:/Project/DealDost_AI/next.config.mjs)):
+  - Global middleware injection: `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `X-XSS-Protection: 1; mode=block`.
+
+- **SEO Metadata Configurations** (Exposed in [layout.tsx](file:///F:/Project/DealDost_AI/app/layout.tsx)):
+  - Built-in full OpenGraph, Twitter, and index crawling configuration templates for Next.js crawler bots.
+
 ---
 
 ## 🎨 Theme, Styling & Tokens
