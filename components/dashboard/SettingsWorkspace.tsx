@@ -2,15 +2,16 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { User, Shield, Sliders, Bell, Mail, Lock, Camera, ChevronRight, Globe, ShieldCheck, Eye, EyeOff, Sparkles, Info } from 'lucide-react';
+import { User, Shield, Sliders, Bell, Mail, Lock, Camera, ChevronRight, Globe, ShieldCheck, Eye, EyeOff, Sparkles, Info, BarChart3, AlertTriangle } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 
-type SettingsTab = 'profile' | 'account' | 'security' | 'preferences';
+type SettingsTab = 'profile' | 'account' | 'security' | 'preferences' | 'usage';
 
 const SETTINGS_TABS: { id: SettingsTab; label: string; icon: any }[] = [
   { id: 'profile', label: 'Profile', icon: User },
   { id: 'security', label: 'Security', icon: Shield },
   { id: 'preferences', label: 'Preferences', icon: Sliders },
+  { id: 'usage', label: 'Check Usage', icon: BarChart3 },
 ];
 
 export default function SettingsWorkspace() {
@@ -30,6 +31,39 @@ export default function SettingsWorkspace() {
   const [language, setLanguage] = useState<'en' | 'hi' | 'hinglish'>('hinglish');
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<{ text: string; isError: boolean } | null>(null);
+
+  // Usage Panel States
+  const [usageData, setUsageData] = useState<{
+    role: 'free' | 'premium';
+    used: number;
+    limit: number | null;
+    remaining: number | null;
+    dailyUsage: { date: string; count: number }[];
+    recentGenerations: { id: string; title: string; createdAt: string }[];
+  } | null>(null);
+  const [isLoadingUsage, setIsLoadingUsage] = useState(false);
+  const [usageError, setUsageError] = useState<string | null>(null);
+
+  // Fetch usage data when activeTab becomes 'usage'
+  useEffect(() => {
+    if (activeTab === 'usage') {
+      const fetchUsage = async () => {
+        setIsLoadingUsage(true);
+        setUsageError(null);
+        try {
+          const res = await fetch('/api/user/usage');
+          if (!res.ok) throw new Error('Failed to fetch usage analytics');
+          const data = await res.json();
+          setUsageData(data);
+        } catch (err: any) {
+          setUsageError(err.message || 'An error occurred');
+        } finally {
+          setIsLoadingUsage(false);
+        }
+      };
+      fetchUsage();
+    }
+  }, [activeTab]);
 
   // Sync inputs with user object
   useEffect(() => {
@@ -396,35 +430,226 @@ export default function SettingsWorkspace() {
                   </div>
                 </motion.div>
               )}
+
+              {activeTab === 'usage' && (
+                <motion.div key="usage" variants={tabVariants} initial="hidden" animate="show" exit="exit" className="space-y-10">
+                  <header>
+                    <h3 className="text-3xl font-['Playfair_Display'] font-semibold text-white mb-2">Usage & Credits</h3>
+                    <p className="text-[#A3A3A3] text-sm font-['Inter']">Monitor your contract generation activity and limits.</p>
+                  </header>
+
+                  {isLoadingUsage ? (
+                    <div className="py-20 flex flex-col items-center justify-center gap-4">
+                      <div className="w-8 h-8 border-2 border-[#D4AF37]/30 border-t-[#D4AF37] rounded-full animate-spin" />
+                      <p className="text-[#A3A3A3] text-sm font-['Inter']">Loading your usage details...</p>
+                    </div>
+                  ) : usageError ? (
+                    <div className="p-6 rounded-2xl bg-red-500/5 border border-red-500/20 text-red-400 text-sm font-['Inter']">
+                      Failed to load usage data: {usageError}
+                    </div>
+                  ) : usageData ? (
+                    <div className="space-y-8">
+                      {/* Plan Status Warning */}
+                      {usageData.role === 'free' && usageData.used >= 10 && (
+                        <div className="p-5 rounded-2xl bg-red-500/5 border border-red-500/20 flex gap-4 items-start">
+                          <AlertTriangle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
+                          <div className="space-y-1">
+                            <h4 className="text-sm font-semibold text-white font-['Inter']">Monthly Limit Reached</h4>
+                            <p className="text-[#A3A3A3] text-xs font-['Inter'] leading-relaxed">
+                              You have generated {usageData.used} of your {usageData.limit} contract allowance. Upgrade to Premium to lift this ceiling.
+                            </p>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Summary Cards */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="p-6 rounded-2xl bg-white/[0.03] border border-white/5 space-y-4">
+                          <div className="space-y-1">
+                            <h4 className="text-xs font-bold text-[#D4AF37] uppercase tracking-widest pl-0.5 font-mono">Current Plan</h4>
+                            <p className="text-2xl font-['Playfair_Display'] font-semibold text-white capitalize">{usageData.role} Tier</p>
+                          </div>
+                          <p className="text-[#A3A3A3] text-xs font-['Inter']">
+                            {usageData.role === 'free' ? 'Standard contract models, 10 limits/mo' : 'Unlimited generations, custom tones & models'}
+                          </p>
+                        </div>
+
+                        <div className="p-6 rounded-2xl bg-white/[0.03] border border-white/5 space-y-4">
+                          <div className="space-y-1">
+                            <h4 className="text-xs font-bold text-[#D4AF37] uppercase tracking-widest pl-0.5 font-mono">Contracts Generated</h4>
+                            <p className="text-2xl font-['Playfair_Display'] font-semibold text-white">
+                              {usageData.used} <span className="text-sm font-sans text-[#A3A3A3] font-normal">/ {usageData.limit || 'Unlimited'}</span>
+                            </p>
+                          </div>
+                          {/* Sleek Progress Bar */}
+                          <div className="w-full h-2 bg-white/5 rounded-full overflow-hidden">
+                            <div 
+                              className={`h-full rounded-full transition-all duration-500 ${
+                                usageData.role === 'premium' 
+                                  ? 'w-full bg-[#D4AF37]' 
+                                  : usageData.used >= 10 
+                                    ? 'bg-red-500' 
+                                    : 'bg-[#D4AF37]'
+                              }`}
+                              style={{ width: usageData.role === 'premium' ? '100%' : `${Math.min(100, (usageData.used / 10) * 100)}%` }}
+                            />
+                          </div>
+                          <p className="text-[10px] text-[#A3A3A3] italic pl-0.5">
+                            Resets on the 1st of next month.
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Custom SVG Bar Chart */}
+                      <div className="p-6 rounded-2xl bg-white/[0.03] border border-white/5 space-y-6">
+                        <div className="flex justify-between items-center">
+                          <h4 className="text-sm font-semibold text-white font-['Inter']">Daily Generations (Last 7 Days)</h4>
+                          <span className="text-[10px] font-mono text-[#D4AF37] uppercase tracking-widest">Analytics</span>
+                        </div>
+
+                        <div className="w-full overflow-x-auto custom-scrollbar">
+                          <div className="min-w-[500px] h-[220px] flex items-center justify-center">
+                            <svg className="w-full h-full" viewBox="0 0 600 220" fill="none" xmlns="http://www.w3.org/2000/svg">
+                              <defs>
+                                <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
+                                  <stop offset="0%" stopColor="#D4AF37" />
+                                  <stop offset="100%" stopColor="#8C7323" stopOpacity={0.1} />
+                                </linearGradient>
+                              </defs>
+
+                              {/* Draw Chart Grid Lines */}
+                              <line x1="40" y1="30" x2="560" y2="30" stroke="white" strokeOpacity="0.05" strokeDasharray="4 4" />
+                              <line x1="40" y1="95" x2="560" y2="95" stroke="white" strokeOpacity="0.05" strokeDasharray="4 4" />
+                              <line x1="40" y1="160" x2="560" y2="160" stroke="white" strokeOpacity="0.1" />
+
+                              {/* Render Bar Elements */}
+                              {usageData.dailyUsage.map((day, i) => {
+                                const maxVal = Math.max(...usageData.dailyUsage.map(d => d.count), 5);
+                                const barWidth = 44;
+                                const spacing = 68;
+                                const startX = 48;
+                                const x = startX + i * spacing;
+                                const barHeight = (day.count / maxVal) * 130;
+                                const y = 160 - barHeight;
+
+                                return (
+                                  <g key={i} className="group">
+                                    {/* Column hover highlight */}
+                                    <rect 
+                                      x={x - 8} 
+                                      y={20} 
+                                      width={barWidth + 16} 
+                                      height={155} 
+                                      rx={8} 
+                                      fill="white" 
+                                      fillOpacity="0" 
+                                      className="hover:fill-opacity-[0.02] cursor-pointer transition-all duration-200" 
+                                    />
+                                    {/* Actual Data Bar */}
+                                    {barHeight > 0 && (
+                                      <rect 
+                                        x={x} 
+                                        y={y} 
+                                        width={barWidth} 
+                                        height={barHeight} 
+                                        rx={6} 
+                                        fill="url(#barGradient)" 
+                                        className="transition-all duration-300"
+                                      />
+                                    )}
+                                    {/* Number Value Label */}
+                                    <text 
+                                      x={x + barWidth / 2} 
+                                      y={y - 8} 
+                                      textAnchor="middle" 
+                                      className="fill-[#D4AF37] text-xs font-semibold font-mono opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                                    >
+                                      {day.count}
+                                    </text>
+                                    {/* Date Label */}
+                                    <text 
+                                      x={x + barWidth / 2} 
+                                      y={185} 
+                                      textAnchor="middle" 
+                                      className="fill-[#A3A3A3] text-[10px] font-sans group-hover:fill-white transition-colors duration-200"
+                                    >
+                                      {day.date}
+                                    </text>
+                                  </g>
+                                );
+                              })}
+                            </svg>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Recent Generations Log */}
+                      <div className="space-y-4">
+                        <h4 className="text-sm font-semibold text-white font-['Inter']">Recent Generations</h4>
+                        <div className="rounded-2xl border border-white/5 overflow-hidden">
+                          {usageData.recentGenerations.length === 0 ? (
+                            <div className="p-8 text-center text-[#A3A3A3] text-xs font-['Inter'] bg-white/[0.01]">
+                              No contracts generated yet.
+                            </div>
+                          ) : (
+                            <div className="divide-y divide-white/5 bg-white/[0.01]">
+                              {usageData.recentGenerations.map((gen) => (
+                                <div key={gen.id} className="p-4 flex justify-between items-center">
+                                  <div className="space-y-1 pr-4">
+                                    <p className="text-sm font-medium text-white truncate max-w-md font-sans">{gen.title}</p>
+                                    <p className="text-[10px] text-[#A3A3A3] font-mono">
+                                      {new Date(gen.createdAt).toLocaleDateString('en-US', {
+                                        month: 'short',
+                                        day: 'numeric',
+                                        hour: '2-digit',
+                                        minute: '2-digit',
+                                      })}
+                                    </p>
+                                  </div>
+                                  <span className="text-[10px] font-mono font-bold bg-[#D4AF37]/10 text-[#D4AF37] px-2.5 py-1 rounded-full uppercase tracking-wider">
+                                    Generated
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ) : null}
+                </motion.div>
+              )}
             </AnimatePresence>
 
             {/* Save Button Footer */}
-            <footer className="mt-16 pt-8 border-t border-white/5 flex flex-col sm:flex-row items-center gap-4">
-              <button 
-                onClick={handleSave}
-                disabled={isSaving}
-                className="w-full md:w-auto px-10 py-4 bg-[#D4AF37] hover:bg-[#C5A059] text-black font-bold text-sm uppercase tracking-[0.2em] rounded-xl transition-all shadow-[0_0_25px_rgba(212,175,55,0.15)] hover:shadow-[0_0_40px_rgba(212,175,55,0.3)] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-              >
-                {isSaving ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin" />
-                    <span>Saving...</span>
-                  </>
-                ) : (
-                  <span>Save Changes</span>
-                )}
-              </button>
-
-              {saveMessage && (
-                <motion.span 
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  className={`text-xs font-semibold font-['Inter'] ${saveMessage.isError ? 'text-red-400' : 'text-green-400'}`}
+            {activeTab !== 'usage' && (
+              <footer className="mt-16 pt-8 border-t border-white/5 flex flex-col sm:flex-row items-center gap-4">
+                <button 
+                  onClick={handleSave}
+                  disabled={isSaving}
+                  className="w-full md:w-auto px-10 py-4 bg-[#D4AF37] hover:bg-[#C5A059] text-black font-bold text-sm uppercase tracking-[0.2em] rounded-xl transition-all shadow-[0_0_25px_rgba(212,175,55,0.15)] hover:shadow-[0_0_40px_rgba(212,175,55,0.3)] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
-                  {saveMessage.text}
-                </motion.span>
-              )}
-            </footer>
+                  {isSaving ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin" />
+                      <span>Saving...</span>
+                    </>
+                  ) : (
+                    <span>Save Changes</span>
+                  )}
+                </button>
+
+                {saveMessage && (
+                  <motion.span 
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    className={`text-xs font-semibold font-['Inter'] ${saveMessage.isError ? 'text-red-400' : 'text-green-400'}`}
+                  >
+                    {saveMessage.text}
+                  </motion.span>
+                )}
+              </footer>
+            )}
           </div>
         </main>
       </div>
