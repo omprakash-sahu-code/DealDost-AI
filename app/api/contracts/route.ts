@@ -86,12 +86,13 @@ export async function POST(req: NextRequest) {
     await contract.save();
 
     // Log activity
+    const activityDescription = generatedData.title || (description && description.length > 80 ? description.substring(0, 80) + '...' : description) || `${contractType.toUpperCase()} Agreement`;
     await ActivityLog.create({
       userId: user._id,
       action: 'contract_generated',
       resourceType: 'contract',
       resourceId: contract._id,
-      description: `Generated a new ${contractType.toUpperCase()} contract`,
+      description: activityDescription,
     });
 
     // If conversation exists, link it

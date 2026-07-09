@@ -23,7 +23,8 @@ import {
   Clipboard,
   Download,
   AlertCircle,
-  ChevronLeft
+  ChevronLeft,
+  Plus
 } from 'lucide-react';
 
 const StampPaperHeader = () => (
@@ -56,27 +57,48 @@ const StampPaperHeader = () => (
 );
 
 export default function ChatWorkspace() {
-  const { messages, sendMessage, isLoading, error, extractedTerms, conversationId } = useChat();
-  const { generateContract, updateContract, isGenerating: isGeneratingContract, isSaving, activeContract, setActiveContract, error: contractError } = useContracts();
-  const [inputText, setInputText] = useState('');
-  
+  const { 
+    messages, 
+    sendMessage, 
+    isLoading, 
+    error, 
+    extractedTerms, 
+    conversationId,
+    activeContract, 
+    setActiveContract,
+    localTerms, 
+    setLocalTerms,
+    viewMode, 
+    setViewMode,
+    rightPanelSize, 
+    setRightPanelSize,
+    inputText, 
+    setInputText,
+    userNotes, 
+    setUserNotes,
+    approvalChecked, 
+    setApprovalChecked,
+    clearChat
+  } = useChat();
+
+  const { 
+    generateContract, 
+    updateContract, 
+    isGenerating: isGeneratingContract, 
+    isSaving, 
+    error: contractError 
+  } = useContracts();
+
   // Contract Preview State
   const [contractBody, setContractBody] = useState('');
   const [copyFeedback, setCopyFeedback] = useState(false);
   
   const [editingSectionId, setEditingSectionId] = useState<string | null>(null);
   const [editContent, setEditContent] = useState('');
-  const [userNotes, setUserNotes] = useState('');
   const [showNotesPanel, setShowNotesPanel] = useState(false);
 
   // Checklist Preview Panel States
-  const [localTerms, setLocalTerms] = useState<any>(null);
   const [editingField, setEditingField] = useState<string | null>(null);
-  const [approvalChecked, setApprovalChecked] = useState(false);
-
-  // Split-view or Full-screen state
-  const [rightPanelSize, setRightPanelSize] = useState<'split' | 'full'>('split');
-  const [viewMode, setViewMode] = useState<'checklist' | 'document'>('checklist');
 
   // Field Edit Form States
   const [tempSideA, setTempSideA] = useState('');
@@ -96,24 +118,6 @@ export default function ChatWorkspace() {
         scrollRef.current.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
     }
   }, [messages, isLoading]);
-
-  // Sync state terms ONLY when a fresh extractedTerms object is loaded from the hook
-  useEffect(() => {
-    if (extractedTerms) {
-      setLocalTerms(extractedTerms);
-    }
-  }, [extractedTerms]);
-
-  // Sync visual layout when a contract is set or cleared
-  useEffect(() => {
-    if (activeContract) {
-      setViewMode('document');
-      setRightPanelSize('full');
-    } else {
-      setViewMode('checklist');
-      setRightPanelSize('split');
-    }
-  }, [activeContract]);
 
   // Update fallbacks for copy and preview
   useEffect(() => {
@@ -151,12 +155,15 @@ export default function ChatWorkspace() {
   const handleGenerateFinalContract = async () => {
     if (!conversationId || !localTerms) return;
     try {
-      await generateContract({ 
+      const contract = await generateContract({ 
         conversationId, 
         type: 'custom', 
         terms: localTerms,
         description: userNotes || undefined 
       });
+      setActiveContract(contract);
+      setViewMode('document');
+      setRightPanelSize('full');
       setShowNotesPanel(false);
     } catch (err) {
       console.error('Failed to generate final contract', err);
@@ -220,7 +227,8 @@ export default function ChatWorkspace() {
     );
 
     try {
-      await updateContract(activeContract._id, { sections: updatedSections });
+      const contract = await updateContract(activeContract._id, { sections: updatedSections });
+      setActiveContract(contract);
       setEditingSectionId(null);
     } catch (err) {
       console.error('Failed to save section edits', err);
@@ -257,6 +265,25 @@ export default function ChatWorkspace() {
             ? 'hidden w-0 opacity-0 pointer-events-none' 
             : 'w-full'
       }`}>
+        
+        {/* Chat Header */}
+        <div className="h-16 border-b border-white/5 flex items-center justify-between px-6 bg-[#0D0D0D]/40 backdrop-blur-xl shrink-0 z-10">
+          <div className="flex items-center gap-2">
+            <DealDostLogo className="w-6 h-6 text-[#D4AF37]" />
+            <span className="text-[10px] uppercase tracking-[0.2em] font-bold text-[#D4AF37]">
+              Chat Assistant
+            </span>
+          </div>
+          {messages.length > 0 && (
+            <button 
+              onClick={clearChat}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold text-[#A3A3A3] hover:text-white bg-white/5 hover:bg-white/10 transition-all border border-white/5 uppercase tracking-wider font-sans"
+            >
+              <Plus className="w-3.5 h-3.5 text-[#D4AF37]" />
+              New Chat
+            </button>
+          )}
+        </div>
         
         {/* Messages / Welcome View Container */}
         <div 

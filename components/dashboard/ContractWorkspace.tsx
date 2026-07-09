@@ -2,9 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useContractWorkspace } from '@/context/ContractWorkspaceContext';
 import { useContracts } from '@/hooks/useContracts';
 import { downloadContractPDF, copyContractToClipboard } from '@/utils/ExportUtils';
-import { Shield, Sparkles, ChevronLeft, Copy, Download, Check, Link2 } from 'lucide-react';
+import { Shield, Sparkles, ChevronLeft, Copy, Download, Check, Link2, Plus } from 'lucide-react';
 
 const StampPaperHeader = () => (
   <div className="border-b-4 border-double border-[#D4AF37] pb-6 mb-8 text-center relative overflow-hidden select-none">
@@ -52,14 +53,22 @@ const LOADING_MESSAGES = [
 ];
 
 export default function ContractWorkspace() {
-  const [selectedType, setSelectedType] = useState('nda');
-  const [description, setDescription] = useState('');
-  const { generateContract, updateContract, isGenerating, isSaving, activeContract, error } = useContracts();
+  const {
+    selectedType,
+    setSelectedType,
+    description,
+    setDescription,
+    viewMode,
+    setViewMode,
+    activeContract,
+    setActiveContract
+  } = useContractWorkspace();
+
+  const { generateContract, updateContract, isGenerating, isSaving, error } = useContracts();
   const [editingSectionId, setEditingSectionId] = useState<string | null>(null);
   const [editContent, setEditContent] = useState('');
   
   // UX Overhaul States
-  const [viewMode, setViewMode] = useState<'form' | 'preview'>('form');
   const [copyFeedback, setCopyFeedback] = useState(false);
   const [shareFeedback, setShareFeedback] = useState(false);
   const [loadingTextIndex, setLoadingTextIndex] = useState(0);
@@ -76,13 +85,6 @@ export default function ContractWorkspace() {
     }
     return () => clearInterval(interval);
   }, [isGenerating]);
-
-  // Transition to preview mode once contract is generated
-  useEffect(() => {
-    if (activeContract) {
-      setViewMode('preview');
-    }
-  }, [activeContract]);
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -108,7 +110,9 @@ export default function ContractWorkspace() {
   const handleGenerate = async () => {
     if (!description.trim()) return;
     try {
-      await generateContract({ type: selectedType, description });
+      const contract = await generateContract({ type: selectedType, description });
+      setActiveContract(contract);
+      setViewMode('preview');
     } catch (err) {
       console.error('Generation failed', err);
     }
@@ -161,7 +165,8 @@ export default function ContractWorkspace() {
     );
 
     try {
-      await updateContract(activeContract._id, { sections: updatedSections });
+      const contract = await updateContract(activeContract._id, { sections: updatedSections });
+      setActiveContract(contract);
       setEditingSectionId(null);
     } catch (err) {
       console.error('Failed to save section edits', err);
@@ -170,6 +175,16 @@ export default function ContractWorkspace() {
 
   return (
     <div className="w-full h-full bg-[#050505] overflow-hidden flex flex-col relative">
+      
+      {/* Contract Header */}
+      <div className="h-16 border-b border-white/5 flex items-center justify-between px-8 bg-[#0D0D0D]/40 backdrop-blur-xl shrink-0 z-10 w-full">
+        <div className="flex items-center gap-2">
+          <Shield className="w-5 h-5 text-[#D4AF37]" />
+          <span className="text-[10px] uppercase tracking-[0.2em] font-bold text-[#D4AF37]">
+            Contract Creator
+          </span>
+        </div>
+      </div>
       
       {/* 1. CINEMATIC FULL-SCREEN LOADING OVERLAY */}
       <AnimatePresence>

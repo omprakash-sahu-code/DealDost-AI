@@ -71,7 +71,7 @@ export async function POST(req: NextRequest) {
         action: 'chat_started',
         resourceType: 'conversation',
         resourceId: conversation._id,
-        description: 'Started a new contract conversation',
+        description: message.length > 80 ? message.substring(0, 80) + '...' : message,
       });
     }
 

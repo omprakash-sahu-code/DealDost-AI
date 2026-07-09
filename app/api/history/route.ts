@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '50');
     const skip = (page - 1) * limit;
 
-    const logs = await ActivityLog.find({ userId: payload.userId })
+    const logs = await ActivityLog.find({ userId: payload.userId, action: { $nin: ['login', 'settings_updated'] } })
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
