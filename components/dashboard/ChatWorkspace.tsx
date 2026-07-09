@@ -7,6 +7,7 @@ import { generateContractBody } from '@/data/ContractTemplate';
 import { downloadContractPDF, copyContractToClipboard } from '@/utils/ExportUtils';
 import { useChat } from '@/hooks/useChat';
 import { useContracts } from '@/hooks/useContracts';
+import { useAuth } from '@/hooks/useAuth';
 import { 
   Check, 
   AlertTriangle, 
@@ -64,6 +65,8 @@ export default function ChatWorkspace() {
     error, 
     extractedTerms, 
     conversationId,
+    contractReady,
+    setContractReady,
     activeContract, 
     setActiveContract,
     localTerms, 
@@ -80,6 +83,8 @@ export default function ChatWorkspace() {
     setApprovalChecked,
     clearChat
   } = useChat();
+
+  const { user } = useAuth();
 
   const { 
     generateContract, 
@@ -252,7 +257,7 @@ export default function ChatWorkspace() {
     return 'missing';
   };
 
-  const isContractVisible = !!extractedTerms;
+  const isContractVisible = contractReady || !!activeContract;
 
   return (
     <div className="flex w-full h-full bg-[#050505] overflow-hidden">
@@ -317,7 +322,7 @@ export default function ChatWorkspace() {
                         "I'm building a website for Rahul",
                         "Logo design deal of 5000 inr",
                         "App development with 1 month deadline",
-                        "Writing 5 articles for 2000 rupees"
+                        "Open the Contract preview panel"
                     ].map((prompt) => (
                         <button
                             key={prompt}
@@ -351,7 +356,7 @@ export default function ChatWorkspace() {
                             ? 'bg-[#D4AF37]/10 border border-[#D4AF37]/30 shadow-[0_0_10px_rgba(212,175,55,0.2)]' 
                             : 'bg-gradient-to-tr from-[#D4AF37] to-[#8C7323] text-black text-[10px] font-bold'
                         }`}>
-                            {msg.role === 'ai' ? <DealDostLogo className="w-5 h-5" /> : 'JD'}
+                            {msg.role === 'ai' ? <DealDostLogo className="w-5 h-5" /> : (user?.name?.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) || '?')}
                         </div>
                         
                         <div className={`max-w-[85%] px-5 py-4 rounded-2xl font-['Inter'] text-[14px] leading-relaxed relative ${

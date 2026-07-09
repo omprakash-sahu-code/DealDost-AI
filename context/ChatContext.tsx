@@ -15,6 +15,7 @@ interface ChatContextType {
   isLoading: boolean;
   error: string | null;
   extractedTerms: GeminiExtractedTerms | null;
+  contractReady: boolean;
   
   // Persisted UI states
   activeContract: any | null;
@@ -31,6 +32,7 @@ interface ChatContextType {
   setIsLoading: (isLoading: boolean) => void;
   setError: (error: string | null) => void;
   setExtractedTerms: (terms: GeminiExtractedTerms | null) => void;
+  setContractReady: (ready: boolean) => void;
   
   setActiveContract: (contract: any | null) => void;
   setLocalTerms: React.Dispatch<React.SetStateAction<any | null>>;
@@ -54,6 +56,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [extractedTerms, setExtractedTerms] = useState<GeminiExtractedTerms | null>(null);
+  const [contractReady, setContractReady] = useState(false);
 
   const [activeContract, setActiveContract] = useState<any | null>(null);
   const [localTerms, setLocalTerms] = useState<any | null>(null);
@@ -97,6 +100,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       setConversationId(data.conversationId);
       setExtractedTerms(data.extractedTerms);
       setLocalTerms(data.extractedTerms); // Update local terms when new ones are extracted
+      if (data.contractReady) setContractReady(true);
 
     } catch (err: any) {
       console.error('[useChat] Error caught:', err);
@@ -121,6 +125,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       setConversationId(id);
       setExtractedTerms(data.conversation.extractedTerms);
       setLocalTerms(data.conversation.extractedTerms);
+      setContractReady(data.conversation.extractedTerms?.confidence >= 0.6 || false);
 
       // Load contract if available
       if (data.conversation.contractId) {
@@ -151,6 +156,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     setMessages([]);
     setConversationId(null);
     setExtractedTerms(null);
+    setContractReady(false);
     setActiveContract(null);
     setLocalTerms(null);
     setViewMode('checklist');
@@ -169,6 +175,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         isLoading,
         error,
         extractedTerms,
+        contractReady,
         activeContract,
         localTerms,
         viewMode,
@@ -181,6 +188,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         setIsLoading,
         setError,
         setExtractedTerms,
+        setContractReady,
         setActiveContract,
         setLocalTerms,
         setViewMode,
