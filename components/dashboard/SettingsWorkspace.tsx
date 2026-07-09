@@ -2,27 +2,32 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { User, Shield, Sliders, Bell, Mail, Lock, Camera, ChevronRight, Globe, ShieldCheck } from 'lucide-react';
+import { User, Shield, Sliders, Bell, Mail, Lock, Camera, ChevronRight, Globe, ShieldCheck, Eye, EyeOff, Sparkles, Info } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 
-type SettingsTab = 'profile' | 'account' | 'security' | 'preferences' | 'notifications';
+type SettingsTab = 'profile' | 'account' | 'security' | 'preferences';
 
 const SETTINGS_TABS: { id: SettingsTab; label: string; icon: any }[] = [
   { id: 'profile', label: 'Profile', icon: User },
   { id: 'security', label: 'Security', icon: Shield },
   { id: 'preferences', label: 'Preferences', icon: Sliders },
-  { id: 'notifications', label: 'Notifications', icon: Bell },
 ];
 
 export default function SettingsWorkspace() {
   const [activeTab, setActiveTab] = useState<SettingsTab>('profile');
-  const [is2FAEnabled, setIs2FAEnabled] = useState(false);
   const { user, refreshUser } = useAuth();
   
   // Settings Form States
   const [name, setName] = useState('');
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [defaultContractType, setDefaultContractType] = useState<'nda' | 'msa' | 'freelance' | 'rental'>('nda');
   const [aiTone, setAiTone] = useState<'strict' | 'balanced' | 'flexible'>('balanced');
+  const [language, setLanguage] = useState<'en' | 'hi' | 'hinglish'>('hinglish');
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<{ text: string; isError: boolean } | null>(null);
 
@@ -33,6 +38,7 @@ export default function SettingsWorkspace() {
       if (user.preferences) {
         setDefaultContractType(user.preferences.defaultContractType || 'nda');
         setAiTone(user.preferences.aiTone || 'balanced');
+        setLanguage(user.preferences.language || 'hinglish');
       }
     }
   }, [user]);
@@ -58,16 +64,42 @@ export default function SettingsWorkspace() {
         if (!res.ok) throw new Error('Failed to update profile name');
       }
 
-      // 2. Save preferences if they changed
+      // 2. Save password if filled
+      if (currentPassword || newPassword || confirmPassword) {
+        if (!currentPassword || !newPassword) {
+          throw new Error('Current and new passwords are required');
+        }
+        if (newPassword !== confirmPassword) {
+          throw new Error('New passwords do not match');
+        }
+        if (newPassword.length < 8) {
+          throw new Error('New password must be at least 8 characters long');
+        }
+        const res = await fetch('/api/user/password', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ currentPassword, newPassword }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message || 'Failed to update password');
+        
+        // Clear password fields on success
+        setCurrentPassword('');
+        setNewPassword('');
+        setConfirmPassword('');
+      }
+
+      // 3. Save preferences if they changed
       const prefsChanged = 
         defaultContractType !== user?.preferences?.defaultContractType ||
-        aiTone !== user?.preferences?.aiTone;
+        aiTone !== user?.preferences?.aiTone ||
+        language !== user?.preferences?.language;
       
       if (prefsChanged) {
         const res = await fetch('/api/user/preferences', {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ defaultContractType, aiTone }),
+          body: JSON.stringify({ defaultContractType, aiTone, language }),
         });
         if (!res.ok) throw new Error('Failed to update workspace preferences');
       }
@@ -212,41 +244,62 @@ export default function SettingsWorkspace() {
                         <label className="text-xs font-bold text-[#D4AF37] uppercase tracking-widest pl-1 font-mono">Current Password</label>
                         <div className="relative">
                           <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#A3A3A3]" />
-                          <input type="password" placeholder="••••••••" className="w-full bg-white/[0.05] border border-white/10 rounded-xl pl-11 pr-4 py-3 text-sm text-white focus:outline-none focus:border-[#D4AF37]/50 transition-all font-sans" />
+                          <input 
+                            type={showCurrentPassword ? 'text' : 'password'} 
+                            placeholder="Enter current password" 
+                            value={currentPassword}
+                            onChange={(e) => setCurrentPassword(e.target.value)}
+                            className="w-full bg-white/[0.05] border border-white/10 rounded-xl pl-11 pr-12 py-3 text-sm text-white focus:outline-none focus:border-[#D4AF37]/50 transition-all font-sans" 
+                          />
+                          <button 
+                            type="button"
+                            onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                            className="absolute right-4 top-1/2 -translate-y-1/2 text-[#A3A3A3] hover:text-white transition-colors"
+                          >
+                            {showCurrentPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          </button>
                         </div>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-2">
                           <label className="text-xs font-bold text-[#D4AF37] uppercase tracking-widest pl-1 font-mono">New Password</label>
-                          <input type="password" placeholder="Min. 8 chars" className="w-full bg-white/[0.05] border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-[#D4AF37]/50 transition-all font-sans" />
+                          <div className="relative">
+                            <input 
+                              type={showNewPassword ? 'text' : 'password'} 
+                              placeholder="Min. 8 chars" 
+                              value={newPassword}
+                              onChange={(e) => setNewPassword(e.target.value)}
+                              className="w-full bg-white/[0.05] border border-white/10 rounded-xl px-4 pr-12 py-3 text-sm text-white focus:outline-none focus:border-[#D4AF37]/50 transition-all font-sans" 
+                            />
+                            <button 
+                              type="button"
+                              onClick={() => setShowNewPassword(!showNewPassword)}
+                              className="absolute right-4 top-1/2 -translate-y-1/2 text-[#A3A3A3] hover:text-white transition-colors"
+                            >
+                              {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                            </button>
+                          </div>
                         </div>
                         <div className="space-y-2">
                           <label className="text-xs font-bold text-[#D4AF37] uppercase tracking-widest pl-1 font-mono">Confirm New Password</label>
-                          <input type="password" placeholder="Re-type password" className="w-full bg-white/[0.05] border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-[#D4AF37]/50 transition-all font-sans" />
+                          <div className="relative">
+                            <input 
+                              type={showConfirmPassword ? 'text' : 'password'} 
+                              placeholder="Re-type password" 
+                              value={confirmPassword}
+                              onChange={(e) => setConfirmPassword(e.target.value)}
+                              className="w-full bg-white/[0.05] border border-white/10 rounded-xl px-4 pr-12 py-3 text-sm text-white focus:outline-none focus:border-[#D4AF37]/50 transition-all font-sans" 
+                            />
+                            <button 
+                              type="button"
+                              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                              className="absolute right-4 top-1/2 -translate-y-1/2 text-[#A3A3A3] hover:text-white transition-colors"
+                            >
+                              {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                            </button>
+                          </div>
                         </div>
                       </div>
-                    </div>
-
-                    {/* 2FA Toggle */}
-                    <div className="p-6 rounded-2xl bg-white/[0.03] border border-white/5 flex items-center justify-between">
-                      <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-xl bg-[#D4AF37]/10 flex items-center justify-center">
-                          <ShieldCheck className="w-5 h-5 text-[#D4AF37]" />
-                        </div>
-                        <div>
-                          <h4 className="text-white font-semibold">Two-Factor Authentication</h4>
-                          <p className="text-[#A3A3A3] text-xs">Add an extra layer of security to your account.</p>
-                        </div>
-                      </div>
-                      <button 
-                        onClick={() => setIs2FAEnabled(!is2FAEnabled)}
-                        className={`w-12 h-6 rounded-full transition-colors relative ${is2FAEnabled ? 'bg-[#D4AF37]' : 'bg-white/10'}`}
-                      >
-                        <motion.div 
-                          animate={{ x: is2FAEnabled ? 26 : 4 }}
-                          className="absolute top-1 w-4 h-4 rounded-full bg-white shadow-lg"
-                        />
-                      </button>
                     </div>
                   </div>
                 </motion.div>
@@ -258,6 +311,18 @@ export default function SettingsWorkspace() {
                     <h3 className="text-3xl font-['Playfair_Display'] font-semibold text-white mb-2">Workspace Preferences</h3>
                     <p className="text-[#A3A3A3] text-sm font-['Inter']">Customize your AI's behavior and default legal parameters.</p>
                   </header>
+
+                  <div className="bg-[#D4AF37]/5 border border-[#D4AF37]/20 rounded-2xl p-4 flex gap-4 items-start">
+                    <Info className="w-5 h-5 text-[#D4AF37] shrink-0 mt-0.5" />
+                    <div>
+                      <h4 className="text-xs font-bold text-[#D4AF37] uppercase tracking-widest mb-1.5 font-sans">
+                        AI Configuration
+                      </h4>
+                      <p className="text-xs text-[#A3A3A3] font-['Inter'] leading-relaxed">
+                        These settings directly control how DealDost AI extracts terms and drafts your final contracts. Changes here will apply to all new chats.
+                      </p>
+                    </div>
+                  </div>
 
                   <div className="space-y-8">
                     {/* Default Contract Type */}
@@ -279,7 +344,10 @@ export default function SettingsWorkspace() {
 
                     {/* AI Tone Selection */}
                     <div className="space-y-4">
-                      <label className="text-xs font-bold text-[#D4AF37] uppercase tracking-widest pl-1 font-mono">AI Legal Tone</label>
+                      <div className="flex items-center gap-2 mb-1">
+                        <Sparkles className="w-3.5 h-3.5 text-[#D4AF37]" />
+                        <label className="text-xs font-bold text-[#D4AF37] uppercase tracking-widest pl-1 font-mono">AI Legal Tone</label>
+                      </div>
                       <div className="grid grid-cols-3 gap-4">
                         {(['strict', 'balanced', 'flexible'] as const).map((tone) => (
                           <button
@@ -297,6 +365,32 @@ export default function SettingsWorkspace() {
                       </div>
                       <p className="text-[10px] text-[#A3A3A3] pl-1 italic">
                         * {aiTone === 'strict' ? 'Focuses on maximum liability protection.' : aiTone === 'balanced' ? 'Standard professional legal balance.' : 'Focuses on deal speed and collaboration.'}
+                      </p>
+                    </div>
+
+                    {/* Language Selection */}
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Sparkles className="w-3.5 h-3.5 text-[#D4AF37]" />
+                        <label className="text-xs font-bold text-[#D4AF37] uppercase tracking-widest pl-1 font-mono">AI Interaction Language</label>
+                      </div>
+                      <div className="grid grid-cols-3 gap-4">
+                        {(['en', 'hi', 'hinglish'] as const).map((lang) => (
+                          <button
+                            key={lang}
+                            onClick={() => setLanguage(lang)}
+                            className={`px-4 py-4 rounded-xl border transition-all text-sm font-['Inter'] capitalize ${
+                              language === lang 
+                                ? 'bg-[#D4AF37]/10 border-[#D4AF37] text-[#D4AF37]' 
+                                : 'bg-white/[0.03] border-white/5 text-[#A3A3A3] hover:border-white/20'
+                            }`}
+                          >
+                            {lang === 'en' ? 'English' : lang === 'hi' ? 'Hindi' : 'Hinglish'}
+                          </button>
+                        ))}
+                      </div>
+                      <p className="text-[10px] text-[#A3A3A3] pl-1 italic">
+                        * The language the AI uses when talking to you in the chat workspace.
                       </p>
                     </div>
                   </div>
