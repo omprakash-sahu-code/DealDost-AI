@@ -2,16 +2,17 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { User, Shield, Sliders, Bell, Mail, Lock, Camera, ChevronRight, Globe, ShieldCheck, Eye, EyeOff, Sparkles, Info, BarChart3, AlertTriangle } from 'lucide-react';
+import { User, Shield, Sliders, Bell, Mail, Lock, Camera, ChevronRight, Globe, ShieldCheck, Eye, EyeOff, Sparkles, Info, BarChart3, AlertTriangle, CreditCard, Check } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 
-type SettingsTab = 'profile' | 'account' | 'security' | 'preferences' | 'usage';
+type SettingsTab = 'profile' | 'account' | 'security' | 'preferences' | 'usage' | 'billing';
 
 const SETTINGS_TABS: { id: SettingsTab; label: string; icon: any }[] = [
   { id: 'profile', label: 'Profile', icon: User },
   { id: 'security', label: 'Security', icon: Shield },
   { id: 'preferences', label: 'Preferences', icon: Sliders },
   { id: 'usage', label: 'Check Usage', icon: BarChart3 },
+  { id: 'billing', label: 'Billing & Plan', icon: CreditCard },
 ];
 
 export default function SettingsWorkspace() {
@@ -43,6 +44,9 @@ export default function SettingsWorkspace() {
   } | null>(null);
   const [isLoadingUsage, setIsLoadingUsage] = useState(false);
   const [usageError, setUsageError] = useState<string | null>(null);
+
+  // Billing States
+  const [isUpdatingRole, setIsUpdatingRole] = useState(false);
 
   // Fetch usage data when activeTab becomes 'usage'
   useEffect(() => {
@@ -147,6 +151,28 @@ export default function SettingsWorkspace() {
       setSaveMessage({ text: err.message || 'Failed to save changes.', isError: true });
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleToggleRole = async (targetRole: 'free' | 'premium') => {
+    setIsUpdatingRole(true);
+    setSaveMessage(null);
+    try {
+      const res = await fetch('/api/user/role', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role: targetRole }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Failed to update plan');
+      await refreshUser();
+      setSaveMessage({ text: `Successfully switched to ${targetRole} plan!`, isError: false });
+      setTimeout(() => setSaveMessage(null), 3000);
+    } catch (err: any) {
+      console.error('[Billing Change] Error:', err);
+      setSaveMessage({ text: err.message || 'Failed to switch plan.', isError: true });
+    } finally {
+      setIsUpdatingRole(false);
     }
   };
 
@@ -619,10 +645,152 @@ export default function SettingsWorkspace() {
                   ) : null}
                 </motion.div>
               )}
+
+              {activeTab === 'billing' && (
+                <motion.div key="billing" variants={tabVariants} initial="hidden" animate="show" exit="exit" className="space-y-10">
+                  <header>
+                    <h3 className="text-3xl font-['Playfair_Display'] font-semibold text-white mb-2">Billing & Plan</h3>
+                    <p className="text-[#A3A3A3] text-sm font-['Inter']">Manage your subscription, pricing, and view invoice history.</p>
+                  </header>
+
+                  {/* Plan Comparison Grid */}
+                  <div className="space-y-6">
+                    <h4 className="text-sm font-semibold text-white font-['Inter']">Subscription Plans</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {/* Free Plan */}
+                      <div className={`p-6 rounded-2xl bg-white/[0.03] border transition-all duration-300 flex flex-col justify-between ${
+                        user?.role !== 'premium' 
+                          ? 'border-[#D4AF37] shadow-[0_0_20px_rgba(212,175,55,0.05)]' 
+                          : 'border-white/5'
+                      }`}>
+                        <div className="space-y-4">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <p className="text-xs font-bold text-[#D4AF37] uppercase tracking-widest pl-0.5 font-mono">Free Tier</p>
+                              <h5 className="text-xl font-semibold text-white mt-1">Standard</h5>
+                            </div>
+                            <span className="text-2xl font-bold text-[#D4AF37] font-['Playfair_Display']">₹0 <span className="text-xs font-sans text-[#A3A3A3] font-normal">/ mo</span></span>
+                          </div>
+                          <p className="text-[#A3A3A3] text-xs leading-relaxed">
+                            Perfect for freelancers getting started with basic deal negotiations.
+                          </p>
+                          <ul className="space-y-2.5 pt-2">
+                            {['10 Contracts / Month', 'Standard AI Legal Engine', 'Web Export & Share Links'].map((feat, i) => (
+                              <li key={i} className="text-xs text-[#F5F5F4] flex items-center gap-2 font-medium">
+                                <span className="text-[#D4AF37]">✦</span> {feat}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                        <div className="pt-6">
+                          <button
+                            disabled={user?.role !== 'premium' || isUpdatingRole}
+                            onClick={() => handleToggleRole('free')}
+                            className="w-full py-3 bg-white/5 border border-white/10 hover:border-[#D4AF37] hover:text-[#D4AF37] text-white font-bold text-xs uppercase tracking-widest rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:border-white/5 disabled:hover:text-white"
+                          >
+                            {user?.role !== 'premium' ? 'Current Plan' : 'Downgrade to Free (Test)'}
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Premium Plan */}
+                      <div className={`p-6 rounded-2xl bg-white/[0.03] border transition-all duration-300 flex flex-col justify-between ${
+                        user?.role === 'premium' 
+                          ? 'border-[#D4AF37] shadow-[0_0_20px_rgba(212,175,55,0.05)]' 
+                          : 'border-white/5'
+                      }`}>
+                        <div className="space-y-4">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <p className="text-xs font-bold text-[#D4AF37] uppercase tracking-widest pl-0.5 font-mono">Premium Tier</p>
+                              <h5 className="text-xl font-semibold text-white mt-1">DealDost Pro</h5>
+                            </div>
+                            <span className="text-2xl font-bold text-[#D4AF37] font-['Playfair_Display']">₹1,499 <span className="text-xs font-sans text-[#A3A3A3] font-normal">/ mo</span></span>
+                          </div>
+                          <p className="text-[#A3A3A3] text-xs leading-relaxed">
+                            For agencies and creators who need unlimited scaling and advanced dispute protections.
+                          </p>
+                          <ul className="space-y-2.5 pt-2">
+                            {['Unlimited Contract Generations', 'Advanced AI Legal Tones (Strict/Flexible)', 'Milestone Escrow Integration', 'Custom Legal Clauses'].map((feat, i) => (
+                              <li key={i} className="text-xs text-[#F5F5F4] flex items-center gap-2 font-medium">
+                                <span className="text-[#D4AF37]">✦</span> {feat}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                        <div className="pt-6">
+                          <button
+                            disabled={user?.role === 'premium' || isUpdatingRole}
+                            onClick={() => handleToggleRole('premium')}
+                            className="w-full py-3 bg-[#D4AF37] hover:bg-[#C5A059] text-black font-bold text-xs uppercase tracking-widest rounded-xl transition-all disabled:opacity-50 disabled:bg-white/5 disabled:text-white disabled:cursor-not-allowed"
+                          >
+                            {user?.role === 'premium' ? 'Current Plan' : 'Upgrade to Premium (Test)'}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Pay-As-You-Go Section */}
+                  <div className="space-y-6">
+                    <div className="flex justify-between items-center border-b border-white/5 pb-2">
+                      <h4 className="text-sm font-semibold text-white font-['Inter']">Pay-As-You-Go Single Drafts</h4>
+                      <span className="text-[10px] text-[#A3A3A3] italic">Available without a subscription</span>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      <div className="p-5 rounded-2xl bg-white/[0.02] border border-white/5 space-y-2">
+                        <h5 className="text-sm font-semibold text-white font-sans">Idea Protection (NDA)</h5>
+                        <p className="text-2xl font-bold text-[#D4AF37] font-['Playfair_Display']">₹499</p>
+                        <p className="text-[10px] text-[#A3A3A3] leading-relaxed">One-time generation fee. Standard NDA with global validity.</p>
+                      </div>
+                      <div className="p-5 rounded-2xl bg-white/[0.02] border border-white/5 space-y-2">
+                        <h5 className="text-sm font-semibold text-white font-sans">Master Service Agreement (MSA)</h5>
+                        <p className="text-2xl font-bold text-[#D4AF37] font-['Playfair_Display']">₹999</p>
+                        <p className="text-[10px] text-[#A3A3A3] leading-relaxed">One-time generation fee. Complete freelance & agency contract terms.</p>
+                      </div>
+                      <div className="p-5 rounded-2xl bg-white/[0.02] border border-white/5 space-y-2">
+                        <h5 className="text-sm font-semibold text-white font-sans">Milestone Escrow Fee</h5>
+                        <p className="text-2xl font-bold text-[#D4AF37] font-['Playfair_Display']">1.5% <span className="text-[10px] font-normal text-[#A3A3A3]">per deal</span></p>
+                        <p className="text-[10px] text-[#A3A3A3] leading-relaxed">Charged upon verification & release of milestone payouts.</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Mock Billing Ledger */}
+                  <div className="space-y-4">
+                    <h4 className="text-sm font-semibold text-white font-['Inter']">Billing History</h4>
+                    <div className="rounded-2xl border border-white/5 overflow-hidden">
+                      <div className="divide-y divide-white/5 bg-white/[0.01]">
+                        {/* Show standard invoices */}
+                        <div className="p-4 flex justify-between items-center text-xs">
+                          <div className="space-y-1">
+                            <p className="font-semibold text-white">Invoice #INV-2983</p>
+                            <p className="text-[#A3A3A3] font-mono">July 09, 2026</p>
+                          </div>
+                          <div className="text-right space-y-1">
+                            <p className="font-semibold text-white">{user?.role === 'premium' ? '₹1,499' : '₹0'}</p>
+                            <span className="text-[9px] bg-green-500/10 text-green-400 font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">Paid</span>
+                          </div>
+                        </div>
+                        <div className="p-4 flex justify-between items-center text-xs">
+                          <div className="space-y-1">
+                            <p className="font-semibold text-white">Invoice #INV-2102</p>
+                            <p className="text-[#A3A3A3] font-mono">June 09, 2026</p>
+                          </div>
+                          <div className="text-right space-y-1">
+                            <p className="font-semibold text-white">{user?.role === 'premium' ? '₹1,499' : '₹0'}</p>
+                            <span className="text-[9px] bg-green-500/10 text-green-400 font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">Paid</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
             </AnimatePresence>
 
             {/* Save Button Footer */}
-            {activeTab !== 'usage' && (
+            {activeTab !== 'usage' && activeTab !== 'billing' ? (
               <footer className="mt-16 pt-8 border-t border-white/5 flex flex-col sm:flex-row items-center gap-4">
                 <button 
                   onClick={handleSave}
@@ -649,6 +817,18 @@ export default function SettingsWorkspace() {
                   </motion.span>
                 )}
               </footer>
+            ) : (
+              saveMessage && (
+                <div className="mt-8 flex justify-start">
+                  <motion.span 
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    className={`text-xs font-semibold font-['Inter'] ${saveMessage.isError ? 'text-red-400' : 'text-green-400'}`}
+                  >
+                    {saveMessage.text}
+                  </motion.span>
+                </div>
+              )
             )}
           </div>
         </main>

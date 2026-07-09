@@ -8,6 +8,7 @@ export interface User {
   id: string;
   name: string;
   email: string;
+  role?: 'free' | 'premium';
   preferences?: {
     defaultContractType: 'nda' | 'msa' | 'freelance' | 'rental';
     aiTone: 'strict' | 'balanced' | 'flexible';

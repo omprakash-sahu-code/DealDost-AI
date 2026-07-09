@@ -89,7 +89,9 @@ export default function Sidebar() {
             </div>
             <div className="flex flex-col flex-1 overflow-hidden">
               <span className={`text-sm font-semibold truncate transition-colors ${pathname === '/dashboard/settings' ? 'text-[#D4AF37]' : ''}`}>{user?.name || 'Loading...'}</span>
-              <span className="text-[10px] text-[#A3A3A3] uppercase tracking-wider font-mono">Premium Plan</span>
+              <span className="text-[10px] text-[#A3A3A3] uppercase tracking-wider font-mono">
+                {user?.role === 'premium' ? 'Premium Plan' : 'Free Plan'}
+              </span>
             </div>
             <button 
               onClick={(e) => {
