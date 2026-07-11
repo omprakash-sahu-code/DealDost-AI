@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Plus, FileText, Filter, LayoutGrid, List, ChevronLeft, Copy, Download, Trash2, Check, Clock, Shield, Link2 } from 'lucide-react';
+import { Search, Plus, FileText, Filter, LayoutGrid, List, ChevronLeft, ChevronDown, Copy, Download, Trash2, Check, Clock, Shield, Link2 } from 'lucide-react';
 import { useContracts } from '@/hooks/useContracts';
 import { downloadContractPDF, copyContractToClipboard } from '@/utils/ExportUtils';
+import { useMediaQuery } from '@/hooks/useMediaQuery';
 
 type DocType = 'All' | 'NDA' | 'MSA' | 'Freelance' | 'Rental';
 
@@ -43,6 +44,7 @@ const StampPaperHeader = () => (
 
 const getContractIcon = (type: string) => {
   const t = type.toLowerCase();
+  if (t === 'all') return 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z';
   if (t === 'nda') return 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z';
   if (t === 'msa') return 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4';
   if (t === 'freelance') return 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z';
@@ -78,6 +80,9 @@ export default function DocsWorkspace({ onNavigate }: DocsWorkspaceProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [copyFeedback, setCopyFeedback] = useState(false);
   const [shareFeedback, setShareFeedback] = useState(false);
+  const [filterOpen, setFilterOpen] = useState(false);
+  const isMobile = useMediaQuery('(max-width: 767px)');
+  const filterRef = useRef<HTMLDivElement>(null);
   
   // Section Editing states
   const [editingSectionId, setEditingSectionId] = useState<string | null>(null);
@@ -97,6 +102,19 @@ export default function DocsWorkspace({ onNavigate }: DocsWorkspaceProps) {
   useEffect(() => {
     loadContracts();
   }, []);
+
+  // Close filter dropdown on click outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (filterRef.current && !filterRef.current.contains(e.target as Node)) {
+        setFilterOpen(false);
+      }
+    };
+    if (filterOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [filterOpen]);
 
   const handleCopy = async () => {
     if (!selectedContract) return;
@@ -215,40 +233,117 @@ export default function DocsWorkspace({ onNavigate }: DocsWorkspaceProps) {
             {/* TOP BAR */}
             <motion.div 
               variants={itemVariants}
-              className="px-8 py-6 border-b border-white/5 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-6 shrink-0 bg-[#0D0D0D]/40 backdrop-blur-3xl"
+              className="px-4 md:px-8 pl-14 md:pl-8 py-4 md:py-6 border-b border-white/5 flex flex-col gap-3 sm:gap-6 shrink-0 bg-[#0D0D0D]/40 backdrop-blur-3xl relative z-30"
             >
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 flex-1 max-w-3xl">
+              {/* Row 1: Search + New Contract */}
+              <div className="flex items-center gap-3">
                 {/* Search Input */}
                 <div className="relative flex-1 group">
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#A3A3A3] group-focus-within:text-[#D4AF37] transition-colors" />
+                  <Search className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#A3A3A3] group-focus-within:text-[#D4AF37] transition-colors" />
                   <input 
                     type="text" 
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Search documents..." 
-                    className="w-full bg-white/[0.03] border border-white/10 rounded-xl py-2.5 pl-11 pr-4 text-sm font-['Inter'] text-white focus:outline-none focus:border-[#D4AF37]/50 focus:bg-white/[0.05] transition-all"
+                    className="w-full bg-white/[0.03] border border-white/10 rounded-xl py-2.5 pl-10 sm:pl-11 pr-4 text-sm font-['Inter'] text-white focus:outline-none focus:border-[#D4AF37]/50 focus:bg-white/[0.05] transition-all"
                   />
                 </div>
 
-                {/* Filters */}
-                <div className="flex items-center bg-white/[0.03] p-1 rounded-xl border border-white/5 overflow-x-auto">
-                  {(['All', 'NDA', 'MSA', 'Freelance', 'Rental'] as DocType[]).map((type) => (
-                    <button
-                      key={type}
-                      onClick={() => setActiveFilter(type)}
-                      className={`px-4 py-1.5 rounded-lg text-xs font-['Inter'] font-medium transition-all shrink-0 ${
-                        activeFilter === type 
-                          ? 'bg-[#D4AF37] text-black shadow-[0_0_15px_rgba(212,175,55,0.3)]' 
-                          : 'text-[#A3A3A3] hover:text-white hover:bg-white/5'
-                      }`}
-                    >
-                      {type}
-                    </button>
-                  ))}
-                </div>
+                <button 
+                  onClick={() => onNavigate('contracts')}
+                  className="flex items-center gap-2 bg-[#D4AF37] hover:bg-[#C5A059] text-black px-4 sm:px-5 py-2.5 rounded-xl font-bold text-sm transition-all shadow-[0_0_20px_rgba(212,175,55,0.15)] hover:shadow-[0_0_30px_rgba(212,175,55,0.3)] active:scale-95 whitespace-nowrap shrink-0"
+                >
+                  <Plus className="w-4 h-4 stroke-[3px]" />
+                  <span className="hidden sm:inline">New Contract</span>
+                </button>
               </div>
 
-              <div className="flex items-center justify-between sm:justify-start gap-4">
+              {/* Row 2: Filters + View Toggle */}
+              <div className="flex items-center justify-between gap-3">
+                {/* MOBILE: Active badge + Filter dropdown button */}
+                {isMobile ? (
+                  <>
+                    {/* Active filter badge on left */}
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      <div className="p-1.5 rounded-lg bg-[#D4AF37]/10 border border-[#D4AF37]/20 shrink-0">
+                        <svg className="w-3.5 h-3.5 text-[#D4AF37]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                          <path strokeLinecap="round" strokeLinejoin="round" d={getContractIcon(activeFilter === 'All' ? 'all' : activeFilter)} />
+                        </svg>
+                      </div>
+                      <span className="text-xs font-bold text-white font-['Inter'] truncate">
+                        {activeFilter === 'All' ? 'All Documents' : activeFilter}
+                      </span>
+                    </div>
+
+                    {/* Filter dropdown button on right */}
+                    <div className="relative" ref={filterRef}>
+                      <button
+                        onClick={() => setFilterOpen(!filterOpen)}
+                        className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold font-['Inter'] transition-all border ${
+                          filterOpen
+                            ? 'bg-[#D4AF37]/10 border-[#D4AF37]/30 text-[#D4AF37]'
+                            : 'bg-white/[0.03] border-white/5 text-[#A3A3A3] hover:text-white'
+                        }`}
+                      >
+                        <Filter className="w-3.5 h-3.5" />
+                        Filter
+                        <ChevronDown className={`w-3 h-3 transition-transform ${filterOpen ? 'rotate-180' : ''}`} />
+                      </button>
+
+                      {/* Dropdown */}
+                      <AnimatePresence>
+                        {filterOpen && (
+                          <motion.div
+                            initial={{ opacity: 0, y: -4, scale: 0.95 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            exit={{ opacity: 0, y: -4, scale: 0.95 }}
+                            transition={{ duration: 0.15 }}
+                            className="absolute right-0 top-full mt-2 w-44 bg-[#161616] border border-white/10 rounded-xl shadow-[0_10px_40px_rgba(0,0,0,0.6)] overflow-hidden z-50"
+                          >
+                            {(['All', 'NDA', 'MSA', 'Freelance', 'Rental'] as DocType[]).map((type) => (
+                              <button
+                                key={type}
+                                onClick={() => {
+                                  setActiveFilter(type);
+                                  setFilterOpen(false);
+                                }}
+                                className={`w-full flex items-center gap-3 px-4 py-3 text-xs font-['Inter'] font-medium transition-all ${
+                                  activeFilter === type
+                                    ? 'bg-[#D4AF37]/10 text-[#D4AF37]'
+                                    : 'text-[#A3A3A3] hover:text-white hover:bg-white/5'
+                                }`}
+                              >
+                                <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                  <path strokeLinecap="round" strokeLinejoin="round" d={getContractIcon(type === 'All' ? 'all' : type)} />
+                                </svg>
+                                <span>{type === 'All' ? 'All Documents' : type}</span>
+                                {activeFilter === type && <Check className="w-3.5 h-3.5 ml-auto text-[#D4AF37]" />}
+                              </button>
+                            ))}
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  </>
+                ) : (
+                  /* DESKTOP: Original filter pill strip */
+                  <div className="flex items-center bg-white/[0.03] p-1 rounded-xl border border-white/5 overflow-x-auto flex-1">
+                    {(['All', 'NDA', 'MSA', 'Freelance', 'Rental'] as DocType[]).map((type) => (
+                      <button
+                        key={type}
+                        onClick={() => setActiveFilter(type)}
+                        className={`px-3 sm:px-4 py-1.5 rounded-lg text-xs font-['Inter'] font-medium transition-all shrink-0 ${
+                          activeFilter === type 
+                            ? 'bg-[#D4AF37] text-black shadow-[0_0_15px_rgba(212,175,55,0.3)]' 
+                            : 'text-[#A3A3A3] hover:text-white hover:bg-white/5'
+                        }`}
+                      >
+                        {type}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
                 {/* View Toggle */}
                 <div className="flex items-center bg-white/[0.03] p-1 rounded-xl border border-white/5 shrink-0">
                   <button
@@ -264,19 +359,11 @@ export default function DocsWorkspace({ onNavigate }: DocsWorkspaceProps) {
                     <List className="w-4 h-4" />
                   </button>
                 </div>
-
-                <button 
-                  onClick={() => onNavigate('contracts')}
-                  className="flex items-center gap-2 bg-[#D4AF37] hover:bg-[#C5A059] text-black px-5 py-2.5 rounded-xl font-bold text-sm transition-all shadow-[0_0_20px_rgba(212,175,55,0.15)] hover:shadow-[0_0_30px_rgba(212,175,55,0.3)] active:scale-95 whitespace-nowrap shrink-0"
-                >
-                  <Plus className="w-4 h-4 stroke-[3px]" />
-                  <span>New Contract</span>
-                </button>
               </div>
             </motion.div>
 
             {/* MAIN CONTENT AREA */}
-            <div className="flex-1 overflow-y-auto px-8 py-12 relative custom-scrollbar">
+            <div className="flex-1 overflow-y-auto px-4 sm:px-8 py-12 relative custom-scrollbar">
               {isLoading ? (
                 <div className="absolute inset-0 flex items-center justify-center">
                   <div className="w-8 h-8 border-2 border-[#D4AF37]/20 border-t-[#D4AF37] rounded-full animate-spin" />
@@ -435,22 +522,23 @@ export default function DocsWorkspace({ onNavigate }: DocsWorkspaceProps) {
             className="flex-1 flex flex-col h-full bg-[#050505] overflow-hidden"
           >
             {/* Sticky Glassmorphic Top Toolbar */}
-            <div className="h-16 border-b border-white/5 flex items-center justify-between px-8 bg-[#0D0D0D]/80 backdrop-blur-xl shrink-0 z-30">
+            <div className="h-16 border-b border-white/5 flex items-center justify-between px-4 md:px-8 pl-16 md:pl-8 bg-[#0D0D0D]/80 backdrop-blur-xl shrink-0 z-30">
               <button
                 onClick={() => {
                   setViewMode('list');
                   setSelectedContract(null);
                 }}
-                className="flex items-center gap-2 text-xs font-bold text-[#A3A3A3] hover:text-white transition-all uppercase tracking-[0.15em] font-sans"
+                className="flex items-center gap-1.5 text-xs font-bold text-[#A3A3A3] hover:text-white transition-all uppercase tracking-[0.15em] font-sans"
               >
                 <ChevronLeft className="w-4 h-4" />
-                Back to Archives
+                <span className="hidden sm:inline">Back to Archives</span>
+                <span className="sm:hidden">Back</span>
               </button>
               
-              <div className="flex gap-2">
+              <div className="flex gap-1.5 sm:gap-2">
                 <button
                   onClick={handleShare}
-                  className={`px-4 py-2 rounded-lg text-[11px] font-bold transition-all border flex items-center gap-2 ${
+                  className={`p-2 sm:px-4 sm:py-2 rounded-lg text-[11px] font-bold transition-all border flex items-center gap-2 ${
                     shareFeedback
                       ? 'bg-[#D4AF37]/10 border-[#D4AF37]/30 text-[#D4AF37]'
                       : 'bg-white/5 hover:bg-white/10 border-white/5 text-white'
@@ -459,56 +547,56 @@ export default function DocsWorkspace({ onNavigate }: DocsWorkspaceProps) {
                   {shareFeedback ? (
                     <>
                       <Check className="w-3.5 h-3.5" />
-                      Link Copied!
+                      <span className="hidden sm:inline">Link Copied!</span>
                     </>
                   ) : (
                     <>
                       <Link2 className="w-3.5 h-3.5" />
-                      Share
+                      <span className="hidden sm:inline">Share</span>
                     </>
                   )}
                 </button>
                 <button
                   onClick={handleCopy}
-                  className="bg-white/5 hover:bg-white/10 px-4 py-2 rounded-lg text-[11px] font-bold text-white transition-all border border-white/5 flex items-center gap-2"
+                  className="bg-white/5 hover:bg-white/10 p-2 sm:px-4 sm:py-2 rounded-lg text-[11px] font-bold text-white transition-all border border-white/5 flex items-center gap-2"
                 >
                   {copyFeedback ? (
                     <>
                       <Check className="w-3.5 h-3.5 text-[#D4AF37]" />
-                      <span className="text-[#D4AF37]">Copied!</span>
+                      <span className="text-[#D4AF37] hidden sm:inline">Copied!</span>
                     </>
                   ) : (
                     <>
                       <Copy className="w-3.5 h-3.5" />
-                      Copy
+                      <span className="hidden sm:inline">Copy</span>
                     </>
                   )}
                 </button>
                 <button
                   onClick={() => downloadContractPDF(selectedContract, `${selectedContract.title.replace(/\s+/g, '_')}.pdf`)}
-                  className="bg-white/5 hover:bg-white/10 px-4 py-2 rounded-lg text-[11px] font-bold text-white transition-all border border-white/5 flex items-center gap-2"
+                  className="bg-white/5 hover:bg-white/10 p-2 sm:px-4 sm:py-2 rounded-lg text-[11px] font-bold text-white transition-all border border-white/5 flex items-center gap-2"
                 >
                   <Download className="w-3.5 h-3.5" />
-                  PDF
+                  <span className="hidden sm:inline">PDF</span>
                 </button>
                 <button
                   onClick={handleArchive}
-                  className="bg-red-500/10 hover:bg-red-500/20 px-4 py-2 rounded-lg text-[11px] font-bold text-red-400 transition-all border border-red-500/20 flex items-center gap-2"
+                  className="bg-red-500/10 hover:bg-red-500/20 p-2 sm:px-4 sm:py-2 rounded-lg text-[11px] font-bold text-red-400 transition-all border border-red-500/20 flex items-center gap-2"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
-                  Delete
+                  <span className="hidden sm:inline">Delete</span>
                 </button>
               </div>
             </div>
 
             {/* Scrollable Document Canvas */}
-            <div className="flex-1 overflow-y-auto p-12 custom-scrollbar bg-[#050505] flex justify-center items-start">
+            <div className="flex-1 overflow-y-auto p-4 sm:p-8 md:p-12 custom-scrollbar bg-[#050505] flex justify-center items-start">
               {/* Paper Canvas */}
               <motion.div
                 initial={{ y: 25, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                className="bg-[#FAF9F6] text-[#1A1A1A] p-12 md:p-16 max-w-3xl w-full shadow-2xl rounded-sm selection:bg-[#D4AF37]/30 font-serif min-h-[1000px] flex flex-col justify-between relative"
+                className="bg-[#FAF9F6] text-[#1A1A1A] p-6 sm:p-12 md:p-16 max-w-3xl w-full shadow-2xl rounded-sm selection:bg-[#D4AF37]/30 font-serif min-h-[1000px] flex flex-col justify-between relative"
               >
                 <div>
                   {/* Stamp paper dynamic header */}

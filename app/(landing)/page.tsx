@@ -2,16 +2,20 @@
 import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import HeroCanvasAnimation from '@/components/landing/HeroCanvasAnimation';
+import MobileHero from '@/components/landing/MobileHero';
 import ServiceShowcase from '@/components/landing/ServiceShowcase';
 import ProcessFeatures from '@/components/landing/ProcessFeatures';
 import FinalCTA from '@/components/landing/FinalCTA';
 import Navbar from '@/components/landing/Navbar';
 import AuthModal from '@/components/auth/AuthModal';
 import { useRouter } from 'next/navigation';
+import { useMediaQuery } from '@/hooks/useMediaQuery';
 
 export default function Home() {
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('signup');
+  const [mounted, setMounted] = useState(false);
+  const isMobile = useMediaQuery('(max-width: 768px)');
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const router = useRouter();
 
@@ -20,6 +24,7 @@ export default function Home() {
     setIsAuthOpen(true);
   };
   useEffect(() => {
+    setMounted(true);
     // Force the browser to start at the top on refresh to sync Canvas frames
     window.scrollTo(0, 0);
     // Removed scrollBehavior to avoid Lenis conflict
@@ -37,7 +42,15 @@ export default function Home() {
             <Navbar onOpenAuth={openAuthModal} />
       
       {/* 1. HERO: The Scroll-Triggered Scale & Chat Transformation */}
-      <HeroCanvasAnimation onOpenAuth={openAuthModal} />
+      {mounted ? (
+        isMobile ? (
+          <MobileHero onOpenAuth={openAuthModal} />
+        ) : (
+          <HeroCanvasAnimation onOpenAuth={openAuthModal} />
+        )
+      ) : (
+        <div className="min-h-screen bg-[#0D0D0D]" />
+      )}
 
       {/* 2. SERVICES: The 'Idea-to-Contract' Catalog */}
       <section className="relative z-10 bg-[#0D0D0D]">
