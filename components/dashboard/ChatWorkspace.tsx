@@ -8,6 +8,7 @@ import { downloadContractPDF, copyContractToClipboard } from '@/utils/ExportUtil
 import { useChat } from '@/hooks/useChat';
 import { useContracts } from '@/hooks/useContracts';
 import { useAuth } from '@/hooks/useAuth';
+import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { 
   Check, 
   AlertTriangle, 
@@ -58,6 +59,9 @@ const StampPaperHeader = () => (
 );
 
 export default function ChatWorkspace() {
+  const isMobile = useMediaQuery('(max-width: 768px)');
+  const [activeMobileTab, setActiveMobileTab] = useState<'chat' | 'preview'>('chat');
+
   const { 
     messages, 
     sendMessage, 
@@ -116,6 +120,14 @@ export default function ChatWorkspace() {
   const [tempLocation, setTempLocation] = useState('India');
 
   const scrollRef = useRef<HTMLDivElement>(null);
+  const isContractVisible = contractReady || !!activeContract;
+
+  // Auto-switch tab on mobile when contract is ready
+  useEffect(() => {
+    if (isMobile && isContractVisible) {
+      setActiveMobileTab('preview');
+    }
+  }, [isContractVisible, isMobile]);
 
   // Auto-scroll logic
   useEffect(() => {
@@ -257,28 +269,37 @@ export default function ChatWorkspace() {
     return 'missing';
   };
 
-  const isContractVisible = contractReady || !!activeContract;
-
   return (
     <div className="flex w-full h-full bg-[#050505] overflow-hidden">
         
       {/* 1. LEFT PANEL: CHAT INTERFACE */}
       <div className={`flex flex-col h-full relative border-r border-white/5 transition-all duration-500 shrink-0 ${
-        isContractVisible && rightPanelSize === 'split' 
-          ? 'w-1/2 md:w-[45%] lg:w-[40%]' 
-          : rightPanelSize === 'full' 
-            ? 'hidden w-0 opacity-0 pointer-events-none' 
-            : 'w-full'
+        isMobile
+          ? activeMobileTab === 'chat' ? 'w-full' : 'hidden w-0 opacity-0 pointer-events-none'
+          : isContractVisible && rightPanelSize === 'split' 
+            ? 'w-1/2 md:w-[45%] lg:w-[40%]' 
+            : rightPanelSize === 'full' 
+              ? 'hidden w-0 opacity-0 pointer-events-none' 
+              : 'w-full'
       }`}>
         
         {/* Chat Header */}
-        <div className="h-16 border-b border-white/5 flex items-center justify-between px-6 bg-[#0D0D0D]/40 backdrop-blur-xl shrink-0 z-10">
+        <div className="h-16 border-b border-white/5 flex items-center justify-between pl-16 md:pl-6 pr-6 bg-[#0D0D0D]/40 backdrop-blur-xl shrink-0 z-10">
           <div className="flex items-center gap-2">
             <DealDostLogo className="w-6 h-6 text-[#D4AF37]" />
             <span className="text-[10px] uppercase tracking-[0.2em] font-bold text-[#D4AF37]">
               Chat Assistant
             </span>
           </div>
+          {isMobile && isContractVisible && (
+            <button
+              onClick={() => setActiveMobileTab('preview')}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-[#D4AF37] bg-[#D4AF37]/10 hover:bg-[#D4AF37]/20 border border-[#D4AF37]/20 transition-all uppercase tracking-wider font-sans ml-auto mr-2 active:scale-95"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              View Terms
+            </button>
+          )}
           {messages.length > 0 && (
             <button 
               onClick={clearChat}
@@ -294,7 +315,7 @@ export default function ChatWorkspace() {
         <div 
             ref={scrollRef}
             data-lenis-prevent="true"
-            className="flex-1 overflow-y-auto px-6 py-10 custom-scrollbar pb-[140px]"
+            className="flex-1 overflow-y-auto px-4 sm:px-6 py-6 sm:py-10 custom-scrollbar pb-[120px] sm:pb-[140px]"
         >
             <AnimatePresence mode="wait">
             {messages.length === 0 ? (
@@ -306,18 +327,21 @@ export default function ChatWorkspace() {
                 exit={{ opacity: 0, scale: 0.95 }}
                 className="max-w-xl mx-auto h-full flex flex-col justify-center items-center text-center"
                 >
-                <div className="mb-8 p-4 rounded-3xl bg-[#D4AF37]/5 border border-[#D4AF37]/10">
-                    <DealDostLogo className="w-12 h-12" />
+                <div className="mb-5 sm:mb-8 p-3 sm:p-4 rounded-2xl sm:rounded-3xl bg-[#D4AF37]/5 border border-[#D4AF37]/10">
+                    <DealDostLogo className="w-9 h-9 sm:w-12 sm:h-12" />
                 </div>
                 
-                <h2 className="text-4xl font-['Playfair_Display'] font-semibold mb-6 text-white tracking-tight leading-tight">
-                    Scale your Business with <span className="text-[#D4AF37]">DealDost AI</span>
+                <h2 className="text-2xl sm:text-4xl font-['Playfair_Display'] font-semibold mb-3 sm:mb-6 text-white tracking-tight leading-tight">
+                    <span className="text-[#D4AF37]">DealDost AI</span>
                 </h2>
-                <p className="text-[#A3A3A3] text-sm mb-10 max-w-md font-['Inter']">
+                <p className="text-[#A3A3A3] text-xs sm:text-sm mb-6 sm:mb-10 max-w-md font-['Inter'] hidden sm:block">
                     Describe your deal in any language (Hinglish/English) and watch our AI extract terms into a professional legal contract.
                 </p>
+                <p className="text-[#A3A3A3] text-xs mb-6 font-['Inter'] sm:hidden">
+                    Describe your deal and let AI draft the contract.
+                </p>
                 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full">
+                <div className="grid grid-cols-2 gap-2 sm:gap-3 w-full">
                     {[
                         "I'm building a website for Rahul",
                         "Logo design deal of 5000 inr",
@@ -327,10 +351,10 @@ export default function ChatWorkspace() {
                         <button
                             key={prompt}
                             onClick={() => handleSend(prompt)}
-                            className="p-4 rounded-xl bg-white/[0.03] border border-white/5 hover:bg-white/[0.05] hover:border-[#D4AF37]/30 transition-all duration-300 text-xs text-[#A3A3A3] hover:text-white font-['Inter'] text-left group flex items-center gap-3"
+                            className="p-3 sm:p-4 rounded-xl bg-white/[0.03] border border-white/5 hover:bg-white/[0.05] hover:border-[#D4AF37]/30 transition-all duration-300 text-[11px] sm:text-xs text-[#A3A3A3] hover:text-white font-['Inter'] text-left group flex items-center gap-2 sm:gap-3"
                         >
-                            <div className="w-1.5 h-1.5 rounded-full bg-[#D4AF37]/40 group-hover:bg-[#D4AF37] transition-colors" />
-                            {prompt}
+                            <div className="w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full bg-[#D4AF37]/40 group-hover:bg-[#D4AF37] transition-colors shrink-0" />
+                            <span className="line-clamp-2">{prompt}</span>
                         </button>
                     ))}
                 </div>
@@ -359,7 +383,7 @@ export default function ChatWorkspace() {
                             {msg.role === 'ai' ? <DealDostLogo className="w-5 h-5" /> : (user?.name?.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) || '?')}
                         </div>
                         
-                        <div className={`max-w-[85%] px-5 py-4 rounded-2xl font-['Inter'] text-[14px] leading-relaxed relative ${
+                        <div className={`max-w-[85%] px-4 sm:px-5 py-3 sm:py-4 rounded-2xl font-['Inter'] text-[13px] sm:text-[14px] leading-relaxed relative ${
                             msg.role === 'ai' 
                             ? 'bg-[#111] border border-white/5 text-[#F5F5F4] rounded-tl-none' 
                             : 'bg-[#D4AF37]/10 border border-[#D4AF37]/20 text-white rounded-tr-none'
@@ -413,8 +437,8 @@ export default function ChatWorkspace() {
         </AnimatePresence>
 
         {/* INPUT BAR */}
-        <div className="absolute bottom-8 left-0 right-0 flex justify-center pointer-events-none px-6">
-            <div className="w-full max-w-2xl bg-[#161616]/90 backdrop-blur-3xl border border-white/10 rounded-[28px] p-2 shadow-[0_20px_50px_rgba(0,0,0,0.8)] pointer-events-auto flex items-end gap-2 focus-within:border-[#D4AF37]/40 focus-within:shadow-[0_20px_50px_rgba(0,0,0,0.8),0_0_20px_rgba(212,175,55,0.1)] transition-all duration-300">
+        <div className="absolute bottom-4 sm:bottom-8 left-0 right-0 flex justify-center pointer-events-none px-3 sm:px-6">
+            <div className="w-full max-w-2xl bg-[#161616]/90 backdrop-blur-3xl border border-white/10 rounded-[22px] sm:rounded-[28px] p-1.5 sm:p-2 shadow-[0_20px_50px_rgba(0,0,0,0.8)] pointer-events-auto flex items-end gap-2 focus-within:border-[#D4AF37]/40 focus-within:shadow-[0_20px_50px_rgba(0,0,0,0.8),0_0_20px_rgba(212,175,55,0.1)] transition-all duration-300">
             <textarea
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
@@ -424,8 +448,8 @@ export default function ChatWorkspace() {
                         handleSend();
                     }
                 }}
-                placeholder="Talk to DealDost... (e.g., 'Rahul is paying 5k for logo design')"
-                className="flex-1 bg-transparent text-white placeholder:text-[#A3A3A3]/60 resize-none outline-none py-4 px-4 text-[14px] font-['Inter'] leading-relaxed max-h-[160px] min-h-[52px] custom-scrollbar"
+                placeholder="Talk to DealDost"
+                className="flex-1 bg-transparent text-white placeholder:text-[#A3A3A3]/60 resize-none outline-none py-3 sm:py-4 px-3 sm:px-4 text-[13px] sm:text-[14px] font-['Inter'] leading-relaxed max-h-[160px] min-h-[44px] sm:min-h-[52px] custom-scrollbar"
                 rows={1}
             />
             <button 
@@ -445,16 +469,28 @@ export default function ChatWorkspace() {
       <AnimatePresence>
         {isContractVisible && (
             <motion.div 
-                initial={{ x: '100%', opacity: 0 }}
-                animate={{ x: 0, opacity: 1 }}
-                exit={{ x: '100%', opacity: 0 }}
+                initial={isMobile ? { y: '100%', opacity: 0 } : { x: '100%', opacity: 0 }}
+                animate={isMobile ? { y: 0, opacity: 1 } : { x: 0, opacity: 1 }}
+                exit={isMobile ? { y: '100%', opacity: 0 } : { x: '100%', opacity: 0 }}
                 transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                className="flex-1 h-full bg-[#0D0D0D] flex flex-col relative border-l border-white/5 shadow-[-20px_0_50px_rgba(0,0,0,0.5)] z-20"
+                className={`${
+                  isMobile 
+                    ? 'fixed inset-0 w-full h-full bg-[#0D0D0D] z-30' 
+                    : 'flex-1 h-full bg-[#0D0D0D] relative border-l border-white/5 shadow-[-20px_0_50px_rgba(0,0,0,0.5)]'
+                } flex flex-col z-20`}
             >
                 {/* Preview Toolbar */}
-                <div className="h-16 border-b border-white/5 flex items-center justify-between px-8 bg-[#0D0D0D]/50 backdrop-blur-xl shrink-0">
+                <div className="h-16 border-b border-white/5 flex items-center justify-between px-4 md:px-8 bg-[#0D0D0D]/50 backdrop-blur-xl shrink-0">
                     <div className="flex items-center gap-2">
-                        {viewMode === 'document' && activeContract ? (
+                        {isMobile ? (
+                            <button 
+                                onClick={() => setActiveMobileTab('chat')}
+                                className="flex items-center gap-2 text-xs font-bold text-[#A3A3A3] hover:text-white transition-all uppercase tracking-[0.15em] font-sans"
+                            >
+                                <ChevronLeft className="w-4 h-4" />
+                                Back to Chat
+                            </button>
+                        ) : viewMode === 'document' && activeContract ? (
                             <button 
                                 onClick={() => {
                                     setViewMode('checklist');
@@ -517,7 +553,7 @@ export default function ChatWorkspace() {
                         <motion.div 
                             initial={{ y: 20, opacity: 0 }}
                             animate={{ y: 0, opacity: 1 }}
-                            className="bg-[#FAF9F6] text-[#1A1A1A] p-16 min-h-[1000px] shadow-[0_50px_100px_rgba(0,0,0,0.8)] rounded-sm relative selection:bg-[#D4AF37]/30 max-w-3xl mx-auto"
+                            className="bg-[#FAF9F6] text-[#1A1A1A] p-6 sm:p-12 md:p-16 min-h-[1000px] shadow-[0_50px_100px_rgba(0,0,0,0.8)] rounded-sm relative selection:bg-[#D4AF37]/30 max-w-3xl mx-auto"
                         >
                             <StampPaperHeader />
 

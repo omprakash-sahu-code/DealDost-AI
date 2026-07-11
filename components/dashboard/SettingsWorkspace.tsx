@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { User, Shield, Sliders, Bell, Mail, Lock, Camera, ChevronRight, Globe, ShieldCheck, Eye, EyeOff, Sparkles, Info, BarChart3, AlertTriangle, CreditCard, Check } from 'lucide-react';
+import { User, Shield, Sliders, Bell, Mail, Lock, Camera, ChevronRight, ChevronDown, Globe, ShieldCheck, Eye, EyeOff, Sparkles, Info, BarChart3, AlertTriangle, CreditCard, Check } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { useMediaQuery } from '@/hooks/useMediaQuery';
 
 type SettingsTab = 'profile' | 'account' | 'security' | 'preferences' | 'usage' | 'billing';
 
@@ -47,6 +48,8 @@ export default function SettingsWorkspace() {
 
   // Billing States
   const [isUpdatingRole, setIsUpdatingRole] = useState(false);
+  const [tabNavOpen, setTabNavOpen] = useState(false);
+  const isMobile = useMediaQuery('(max-width: 767px)');
 
   // Fetch usage data when activeTab becomes 'usage'
   useEffect(() => {
@@ -206,66 +209,133 @@ export default function SettingsWorkspace() {
       animate="show"
       className="flex-1 flex flex-col h-full bg-[#050505] overflow-hidden"
     >
-      <div className="flex h-full">
-        {/* LEFT SIDEBAR (SETTINGS NAV) */}
-        <aside className="w-64 border-r border-white/5 bg-[#0D0D0D]/40 backdrop-blur-3xl flex flex-col py-10 px-6 shrink-0">
-          <h2 className="text-2xl font-['Playfair_Display'] font-semibold text-white mb-8 px-2">Settings</h2>
-          <nav className="flex flex-col gap-2">
-            {SETTINGS_TABS.map((tab) => {
-              const Icon = tab.icon;
-              const isActive = activeTab === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-['Inter'] transition-all duration-300 ${
-                    isActive 
-                      ? 'bg-[#D4AF37]/10 text-[#D4AF37] border border-[#D4AF37]/20 shadow-[0_0_20px_rgba(212,175,55,0.05)]' 
-                      : 'text-[#A3A3A3] hover:text-white hover:bg-white/5 border border-transparent'
-                  }`}
+      <div className="flex flex-col md:flex-row h-full">
+        {/* MOBILE: Page-level header with inline dropdown */}
+        {isMobile ? (
+          <div className="border-b border-white/5 bg-[#0D0D0D]/40 backdrop-blur-3xl shrink-0">
+            {/* Tappable header showing active tab */}
+            <button
+              onClick={() => setTabNavOpen(!tabNavOpen)}
+              className="w-full flex items-center justify-between px-4 pl-14 py-4"
+            >
+              <div className="flex items-center gap-2.5">
+                {(() => {
+                  const activeTabData = SETTINGS_TABS.find(t => t.id === activeTab);
+                  const ActiveIcon = activeTabData?.icon || Sliders;
+                  return (
+                    <>
+                      <div className="p-1.5 rounded-lg bg-[#D4AF37]/10 border border-[#D4AF37]/20">
+                        <ActiveIcon className="w-4 h-4 text-[#D4AF37]" />
+                      </div>
+                      <span className="text-sm font-semibold text-white font-['Inter']">
+                        {activeTabData?.label || 'Settings'}
+                      </span>
+                    </>
+                  );
+                })()}
+              </div>
+              <ChevronDown className={`w-4 h-4 text-[#A3A3A3] transition-transform duration-200 ${tabNavOpen ? 'rotate-180' : ''}`} />
+            </button>
+
+            {/* Inline accordion dropdown */}
+            <AnimatePresence>
+              {tabNavOpen && (
+                <motion.nav
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+                  className="overflow-hidden border-t border-white/5"
                 >
-                  <Icon className={`w-4 h-4 ${isActive ? 'text-[#D4AF37]' : 'opacity-60'}`} />
-                  <span className="font-medium">{tab.label}</span>
-                  {isActive && <motion.div layoutId="activeTabIndicator" className="ml-auto w-1 h-4 bg-[#D4AF37] rounded-full" />}
-                </button>
-              );
-            })}
-          </nav>
-        </aside>
+                  <div className="px-4 py-2 space-y-0.5">
+                    {SETTINGS_TABS.map((tab) => {
+                      const Icon = tab.icon;
+                      const isActive = activeTab === tab.id;
+                      return (
+                        <button
+                          key={tab.id}
+                          onClick={() => {
+                            setActiveTab(tab.id);
+                            setTabNavOpen(false);
+                          }}
+                          className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-['Inter'] transition-all ${
+                            isActive
+                              ? 'bg-[#D4AF37]/10 text-[#D4AF37]'
+                              : 'text-[#A3A3A3] hover:text-white hover:bg-white/5'
+                          }`}
+                        >
+                          <Icon className={`w-4 h-4 ${isActive ? 'text-[#D4AF37]' : 'opacity-60'}`} />
+                          <span className="font-medium">{tab.label}</span>
+                          {isActive && <Check className="w-3.5 h-3.5 ml-auto text-[#D4AF37]" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </motion.nav>
+              )}
+            </AnimatePresence>
+          </div>
+        ) : (
+          /* DESKTOP: Original left sidebar nav */
+          <aside className="w-64 border-r border-white/5 bg-[#0D0D0D]/40 backdrop-blur-3xl flex flex-col py-10 px-6 shrink-0">
+            <h2 className="text-2xl font-['Playfair_Display'] font-semibold text-white mb-8 px-2">Settings</h2>
+            <nav className="flex flex-col gap-2">
+              {SETTINGS_TABS.map((tab) => {
+                const Icon = tab.icon;
+                const isActive = activeTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-['Inter'] transition-all duration-300 ${
+                      isActive 
+                        ? 'bg-[#D4AF37]/10 text-[#D4AF37] border border-[#D4AF37]/20 shadow-[0_0_20px_rgba(212,175,55,0.05)]' 
+                        : 'text-[#A3A3A3] hover:text-white hover:bg-white/5 border border-transparent'
+                    }`}
+                  >
+                    <Icon className={`w-4 h-4 ${isActive ? 'text-[#D4AF37]' : 'opacity-60'}`} />
+                    <span className="font-medium">{tab.label}</span>
+                    {isActive && <motion.div layoutId="activeTabIndicator" className="ml-auto w-1 h-4 bg-[#D4AF37] rounded-full" />}
+                  </button>
+                );
+              })}
+            </nav>
+          </aside>
+        )}
 
         {/* RIGHT CONTENT PANEL */}
-        <main className="flex-1 overflow-y-auto custom-scrollbar p-12 lg:p-16">
+        <main className="flex-1 overflow-y-auto custom-scrollbar p-5 md:p-12 lg:p-16 pb-24">
           <div className="max-w-2xl mx-auto w-full">
             <AnimatePresence mode="wait">
               {activeTab === 'profile' && (
-                <motion.div key="profile" variants={tabVariants} initial="hidden" animate="show" exit="exit" className="space-y-10">
+                <motion.div key="profile" variants={tabVariants} initial="hidden" animate="show" exit="exit" className="space-y-6 sm:space-y-10">
                   <header>
-                    <h3 className="text-3xl font-['Playfair_Display'] font-semibold text-white mb-2">Profile Information</h3>
-                    <p className="text-[#A3A3A3] text-sm font-['Inter']">Update your personal details and how you appear on the platform.</p>
+                    <h3 className="text-xl sm:text-3xl font-['Playfair_Display'] font-semibold text-white mb-1 sm:mb-2">Profile Information</h3>
+                    <p className="text-[#A3A3A3] text-xs sm:text-sm font-['Inter']">Update your personal details and how you appear on the platform.</p>
                   </header>
 
-                  <div className="space-y-8">
+                  <div className="space-y-6 sm:space-y-8">
                     {/* Avatar Upload */}
-                    <div className="flex items-center gap-6">
+                    <div className="flex items-center gap-4 sm:gap-6">
                       <div className="relative group">
-                        <div className="w-24 h-24 rounded-full bg-gradient-to-tr from-[#D4AF37] to-[#8C7323] p-0.5 shadow-[0_0_25px_rgba(212,175,55,0.15)] transition-shadow duration-500 group-hover:shadow-[0_0_40px_rgba(212,175,55,0.25)]">
+                        <div className="w-16 h-16 sm:w-24 sm:h-24 rounded-full bg-gradient-to-tr from-[#D4AF37] to-[#8C7323] p-0.5 shadow-[0_0_25px_rgba(212,175,55,0.15)] transition-shadow duration-500 group-hover:shadow-[0_0_40px_rgba(212,175,55,0.25)]">
                           <div className="w-full h-full rounded-full bg-[#0D0D0D] flex items-center justify-center overflow-hidden">
-                            <span className="text-2xl font-bold text-[#D4AF37]">{user ? getInitials(name || user.name) : 'DD'}</span>
+                            <span className="text-lg sm:text-2xl font-bold text-[#D4AF37]">{user ? getInitials(name || user.name) : 'DD'}</span>
                           </div>
                         </div>
-                        <button className="absolute bottom-0 right-0 p-2 rounded-full bg-[#D4AF37] text-black shadow-lg hover:scale-110 transition-transform">
+                        <button className="absolute bottom-0 right-0 p-1.5 sm:p-2 rounded-full bg-[#D4AF37] text-black shadow-lg hover:scale-110 transition-transform">
                           <Camera className="w-3 h-3 stroke-[3px]" />
                         </button>
                       </div>
                       <div className="space-y-1">
-                        <h4 className="text-white font-semibold">Profile Photo</h4>
+                        <h4 className="text-white font-semibold text-sm sm:text-base">Profile Photo</h4>
                         <p className="text-[#A3A3A3] text-xs">JPG, PNG or WEBP. Max 2MB.</p>
                       </div>
                     </div>
 
                     {/* Inputs */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="space-y-2">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+                      <div className="space-y-1.5 sm:space-y-2">
                         <label className="text-xs font-bold text-[#D4AF37] uppercase tracking-widest pl-1 font-mono">Full Name</label>
                         <input 
                           type="text" 
@@ -291,10 +361,10 @@ export default function SettingsWorkspace() {
               )}
 
               {activeTab === 'security' && (
-                <motion.div key="security" variants={tabVariants} initial="hidden" animate="show" exit="exit" className="space-y-10">
+                <motion.div key="security" variants={tabVariants} initial="hidden" animate="show" exit="exit" className="space-y-6 sm:space-y-10">
                   <header>
-                    <h3 className="text-3xl font-['Playfair_Display'] font-semibold text-white mb-2">Security Settings</h3>
-                    <p className="text-[#A3A3A3] text-sm font-['Inter']">Manage your credentials and enhance your account protection.</p>
+                    <h3 className="text-xl sm:text-3xl font-['Playfair_Display'] font-semibold text-white mb-1 sm:mb-2">Security Settings</h3>
+                    <p className="text-[#A3A3A3] text-xs sm:text-sm font-['Inter']">Manage your credentials and enhance your account protection.</p>
                   </header>
 
                   <div className="space-y-8">
@@ -366,10 +436,10 @@ export default function SettingsWorkspace() {
               )}
 
               {activeTab === 'preferences' && (
-                <motion.div key="preferences" variants={tabVariants} initial="hidden" animate="show" exit="exit" className="space-y-10">
+                <motion.div key="preferences" variants={tabVariants} initial="hidden" animate="show" exit="exit" className="space-y-6 sm:space-y-10">
                   <header>
-                    <h3 className="text-3xl font-['Playfair_Display'] font-semibold text-white mb-2">Workspace Preferences</h3>
-                    <p className="text-[#A3A3A3] text-sm font-['Inter']">Customize your AI's behavior and default legal parameters.</p>
+                    <h3 className="text-xl sm:text-3xl font-['Playfair_Display'] font-semibold text-white mb-1 sm:mb-2">Workspace Preferences</h3>
+                    <p className="text-[#A3A3A3] text-xs sm:text-sm font-['Inter']">Customize your AI's behavior and default legal parameters.</p>
                   </header>
 
                   <div className="bg-[#D4AF37]/5 border border-[#D4AF37]/20 rounded-2xl p-4 flex gap-4 items-start">
@@ -458,10 +528,10 @@ export default function SettingsWorkspace() {
               )}
 
               {activeTab === 'usage' && (
-                <motion.div key="usage" variants={tabVariants} initial="hidden" animate="show" exit="exit" className="space-y-10">
+                <motion.div key="usage" variants={tabVariants} initial="hidden" animate="show" exit="exit" className="space-y-6 sm:space-y-10">
                   <header>
-                    <h3 className="text-3xl font-['Playfair_Display'] font-semibold text-white mb-2">Usage & Credits</h3>
-                    <p className="text-[#A3A3A3] text-sm font-['Inter']">Monitor your contract generation activity and limits.</p>
+                    <h3 className="text-xl sm:text-3xl font-['Playfair_Display'] font-semibold text-white mb-1 sm:mb-2">Usage & Credits</h3>
+                    <p className="text-[#A3A3A3] text-xs sm:text-sm font-['Inter']">Monitor your contract generation activity and limits.</p>
                   </header>
 
                   {isLoadingUsage ? (
@@ -647,10 +717,10 @@ export default function SettingsWorkspace() {
               )}
 
               {activeTab === 'billing' && (
-                <motion.div key="billing" variants={tabVariants} initial="hidden" animate="show" exit="exit" className="space-y-10">
+                <motion.div key="billing" variants={tabVariants} initial="hidden" animate="show" exit="exit" className="space-y-6 sm:space-y-10">
                   <header>
-                    <h3 className="text-3xl font-['Playfair_Display'] font-semibold text-white mb-2">Billing & Plan</h3>
-                    <p className="text-[#A3A3A3] text-sm font-['Inter']">Manage your subscription, pricing, and view invoice history.</p>
+                    <h3 className="text-xl sm:text-3xl font-['Playfair_Display'] font-semibold text-white mb-1 sm:mb-2">Billing & Plan</h3>
+                    <p className="text-[#A3A3A3] text-xs sm:text-sm font-['Inter']">Manage your subscription, pricing, and view invoice history.</p>
                   </header>
 
                   {/* Plan Comparison Grid */}

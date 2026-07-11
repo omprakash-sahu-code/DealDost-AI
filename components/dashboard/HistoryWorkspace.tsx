@@ -186,7 +186,7 @@ export default function HistoryWorkspace() {
     return (
       <div className="flex-1 flex flex-col bg-[#050505]">
         {/* Header */}
-        <div className="h-16 border-b border-white/5 flex items-center px-8 bg-[#0D0D0D]/40 backdrop-blur-xl shrink-0 z-10">
+        <div className="h-16 border-b border-white/5 flex items-center pl-16 md:pl-8 pr-8 bg-[#0D0D0D]/40 backdrop-blur-xl shrink-0 z-10">
           <div className="flex items-center gap-2">
             <History className="w-5 h-5 text-[#D4AF37]" />
             <span className="text-[10px] uppercase tracking-[0.2em] font-bold text-[#D4AF37]">
@@ -216,7 +216,7 @@ export default function HistoryWorkspace() {
   return (
     <div className="flex-1 flex flex-col h-full bg-[#050505] overflow-hidden">
       {/* Header */}
-      <div className="h-16 border-b border-white/5 flex items-center px-8 bg-[#0D0D0D]/40 backdrop-blur-xl shrink-0 z-10">
+      <div className="h-16 border-b border-white/5 flex items-center pl-16 md:pl-8 pr-8 bg-[#0D0D0D]/40 backdrop-blur-xl shrink-0 z-10">
         <div className="flex items-center gap-2">
           <History className="w-5 h-5 text-[#D4AF37]" />
           <span className="text-[10px] uppercase tracking-[0.2em] font-bold text-[#D4AF37]">
@@ -226,7 +226,7 @@ export default function HistoryWorkspace() {
       </div>
 
       <div className="flex-1 overflow-y-auto custom-scrollbar">
-        <div className="max-w-4xl mx-auto w-full px-8 py-16">
+        <div className="max-w-4xl mx-auto w-full px-4 sm:px-8 py-12 sm:py-16">
           {/* Page Title */}
           <div className="mb-12">
             <h2 className="text-4xl font-['Playfair_Display'] font-semibold text-white mb-2">Activity <span className="text-[#D4AF37]">History</span></h2>

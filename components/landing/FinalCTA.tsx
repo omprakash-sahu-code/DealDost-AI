@@ -30,10 +30,10 @@ export default function FinalCTA({ onOpenAuth }: { onOpenAuth?: (mode: 'login'|'
         >
           Instant Protection
         </motion.span>
-        <h2 className="text-5xl md:text-7xl font-['Playfair_Display'] font-semibold text-[#F5F5F4] text-shadow-gold mb-6 tracking-tighter">
+        <h2 className="text-4xl sm:text-5xl md:text-7xl font-['Playfair_Display'] font-semibold text-[#F5F5F4] text-shadow-gold mb-6 tracking-tighter">
           Ready to Close the Deal?
         </h2>
-        <p className="text-lg md:text-xl text-[#A3A3A3] font-['Inter'] mb-12 max-w-xl mx-auto leading-relaxed">
+        <p className="text-base sm:text-lg md:text-xl text-[#A3A3A3] font-['Inter'] mb-12 max-w-xl mx-auto leading-relaxed">
           Stop relying on handshake promises. Let Deal-Dost convert your chat into a secure, legally binding contract in under 60 seconds.
         </p>
 
@@ -42,7 +42,7 @@ export default function FinalCTA({ onOpenAuth }: { onOpenAuth?: (mode: 'login'|'
           whileTap={{ scale: 0.97 }}
           onClick={() => onOpenAuth?.('signup')}
           transition={{ type: "spring", stiffness: 400, damping: 10 }}
-          className="group relative inline-flex items-center justify-center bg-[#D4AF37] text-black px-12 py-5 font-bold uppercase tracking-[0.2em] text-sm rounded-lg overflow-hidden shadow-[0_0_40px_rgba(212,175,55,0.3)] hover:shadow-[0_0_60px_rgba(212,175,55,0.6)] transition-shadow duration-500"
+          className="group relative inline-flex items-center justify-center w-full max-w-sm sm:w-auto bg-[#D4AF37] text-black px-6 sm:px-12 py-4 sm:py-5 font-bold uppercase tracking-[0.15em] sm:tracking-[0.2em] text-xs sm:text-sm rounded-lg overflow-hidden shadow-[0_0_40px_rgba(212,175,55,0.3)] hover:shadow-[0_0_60px_rgba(212,175,55,0.6)] transition-shadow duration-500"
         >
           <span className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-500 ease-out" />
           <span className="relative font-['Inter']">Generate Your First Contract</span>
