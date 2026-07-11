@@ -239,7 +239,7 @@ export default function ContractWorkspace() {
             initial="hidden"
             animate="show"
             exit="exit"
-            className="flex-1 overflow-y-auto custom-scrollbar py-16"
+            className="flex-1 overflow-y-auto custom-scrollbar py-6 sm:py-16"
           >
             <div className="w-full max-w-4xl mx-auto px-4 sm:px-8 lg:px-12">
               {/* Header */}
@@ -253,12 +253,12 @@ export default function ContractWorkspace() {
               </motion.div>
 
               {/* SECTION 1 - Contract Types */}
-              <motion.div variants={itemVariants} className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4 mb-6 sm:mb-10">
+              <motion.div variants={itemVariants} className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4 mb-6 sm:mb-10">
                 {CONTRACT_TYPES.map((type) => (
                   <button
                     key={type.id}
                     onClick={() => setSelectedType(type.id)}
-                    className={`p-3 sm:p-5 rounded-xl sm:rounded-2xl border backdrop-blur-xl transition-all duration-300 text-left flex flex-row sm:flex-col items-center sm:items-start gap-2 sm:gap-3 group ${
+                    className={`p-3.5 sm:p-5 rounded-xl sm:rounded-2xl border backdrop-blur-xl transition-all duration-300 text-center sm:text-left flex flex-col items-center sm:items-start gap-2 sm:gap-3 group ${
                       selectedType === type.id 
                         ? 'bg-[#D4AF37]/10 border-[#D4AF37] shadow-[0_0_20px_rgba(212,175,55,0.15)]' 
                         : 'bg-white/[0.03] border-white/5 hover:border-white/10'
@@ -269,8 +269,8 @@ export default function ContractWorkspace() {
                         <path strokeLinecap="round" strokeLinejoin="round" d={type.icon} />
                       </svg>
                     </div>
-                    <div className="min-w-0">
-                      <h4 className={`text-xs sm:text-sm font-bold font-['Inter'] truncate ${selectedType === type.id ? 'text-[#D4AF37]' : 'text-white'}`}>
+                    <div className="min-w-0 w-full">
+                      <h4 className={`text-xs sm:text-sm font-bold font-['Inter'] leading-tight whitespace-normal ${selectedType === type.id ? 'text-[#D4AF37]' : 'text-white'}`}>
                         {type.name}
                       </h4>
                       <p className="text-[9px] sm:text-[10px] text-[#A3A3A3] mt-0.5 sm:mt-1 line-clamp-1 sm:line-clamp-2 leading-snug font-medium uppercase tracking-wider font-sans hidden sm:block">
