@@ -1,11 +1,13 @@
+// app/api/contracts/generate/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/db';
 import Contract from '@/models/Contract';
 import Conversation from '@/models/Conversation';
 import User from '@/models/User';
 import ActivityLog from '@/models/ActivityLog';
-import { generateContractFromTerms, extractDealTerms } from '@/lib/gemini';
+import { generateContractFromTerms, translateContractSections } from '@/lib/gemini';
 import { verifyToken, AUTH_COOKIE_NAME } from '@/lib/auth';
+import { isValidLanguageCode } from '@/lib/languages';
 
 export async function POST(req: NextRequest) {
   try {
@@ -21,36 +23,36 @@ export async function POST(req: NextRequest) {
     let termsToUse: any = body.terms;
     let contractType = type || 'custom';
 
+    // Language is a top-level output preference, independent of extracted terms.
+    const language = isValidLanguageCode(body.language) ? body.language : 'en';
+
     await connectDB();
     const user = await User.findById(payload.userId);
     if (!user) return NextResponse.json({ message: 'User not found' }, { status: 404 });
 
-    // 3. Resolve terms
+    // 3. Resolve terms (unchanged from existing logic)
     if (conversationId) {
       const conversation = await Conversation.findOne({ _id: conversationId, userId: user._id });
       if (!conversation) {
         return NextResponse.json({ message: 'Conversation not found' }, { status: 404 });
       }
-      
+
       if (body.terms) {
         termsToUse = body.terms;
         conversation.extractedTerms = body.terms;
         await conversation.save();
       } else {
         if (!conversation.extractedTerms) {
-           return NextResponse.json({ message: 'No extracted terms found in conversation' }, { status: 400 });
+          return NextResponse.json({ message: 'No extracted terms found in conversation' }, { status: 400 });
         }
         termsToUse = { ...JSON.parse(JSON.stringify(conversation.extractedTerms)) };
       }
-      
-      // Append user notes if provided alongside the chat-based flow
+
       if (description) {
         termsToUse.userNotes = description;
       }
       contractType = 'custom';
     } else if (description && !termsToUse) {
-      // Template flow: We can try to extract terms from description first for better structure, 
-      // or just pass description directly as scope. Let's pass it as scope.
       termsToUse = { scope: description };
     }
 
@@ -58,10 +60,37 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ message: 'Terms, description, or conversationId is required' }, { status: 400 });
     }
 
-    // 4. Generate Contract via AI
+    // 4. Generate base contract via AI (unchanged)
     const generatedData = await generateContractFromTerms(termsToUse, contractType, {
       aiTone: user.preferences.aiTone,
     });
+
+    // 4b. Translate if a regional language was requested — isolated, non-fatal on failure.
+    let translatedContent: { markdown: string; sections: typeof generatedData.sections } | null = null;
+    let translationStatus: 'not_applicable' | 'pending' | 'success' | 'failed' = 'not_applicable';
+    let translationError: string | null = null;
+
+    const languageRequiresTranslation = language !== 'en' && language !== 'hinglish';
+    if (languageRequiresTranslation) {
+      translationStatus = 'pending';
+      const translationResult = await translateContractSections(
+        generatedData.title,
+        generatedData.sections,
+        language
+      );
+
+      if (translationResult.success && translationResult.data) {
+        translatedContent = {
+          markdown: translationResult.data.fullMarkdown,
+          sections: translationResult.data.sections,
+        };
+        translationStatus = 'success';
+      } else {
+        translationStatus = 'failed';
+        translationError = translationResult.errorMessage;
+        // Deliberately do not fail the request — base contract is still valid.
+      }
+    }
 
     // 5. Save to Database
     const contract = new Contract({
@@ -75,6 +104,10 @@ export async function POST(req: NextRequest) {
         markdown: generatedData.fullMarkdown,
         sections: generatedData.sections,
       },
+      language,
+      translatedContent,
+      translationStatus,
+      translationError,
       metadata: {
         generatedBy: conversationId ? 'ai-chat' : 'template',
         aiModel: process.env.AI_MODEL || 'openrouter-gemma',
@@ -85,7 +118,7 @@ export async function POST(req: NextRequest) {
 
     await contract.save();
 
-    // Log activity
+    // Log activity (unchanged)
     const activityDescription = generatedData.title || (description && description.length > 80 ? description.substring(0, 80) + '...' : description) || `${contractType.toUpperCase()} Agreement`;
     await ActivityLog.create({
       userId: user._id,
@@ -95,7 +128,6 @@ export async function POST(req: NextRequest) {
       description: activityDescription,
     });
 
-    // If conversation exists, link it
     if (conversationId) {
       await Conversation.updateOne({ _id: conversationId }, { contractId: contract._id });
     }

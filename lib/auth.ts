@@ -10,7 +10,7 @@ export interface TokenPayload {
 export const getJwtSecretKey = () => {
   const secret = process.env.JWT_SECRET;
   if (!secret || secret.length === 0) {
-    throw new Error('The environment variable JWT_SECRET is not set.');
+    throw new Error('Missing JWT_SECRET environment variable. Please add it to your .env.local file.');
   }
   return new TextEncoder().encode(secret);
 };

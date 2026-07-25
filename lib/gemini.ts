@@ -1,6 +1,7 @@
 import OpenAI from 'openai';
 import { IMessage, IExtractedTerms } from '@/models/Conversation';
 import { GeminiResponse } from '@/types/chat';
+import { LanguageCode, getLanguageOption } from '@/lib/languages';
 
 const openrouter = new OpenAI({
   baseURL: process.env.OPENROUTER_BASE_URL || 'https://openrouter.ai/api/v1',
@@ -154,4 +155,130 @@ export async function generateContractFromTerms(
     console.error('Failed to parse AI contract response:', responseText);
     throw new Error('Invalid JSON contract response from AI');
   }
+}
+const TRANSLATION_PROMPT = `
+You are a certified legal translator specializing in Indian contract law and regional Indian languages.
+
+Translate the following contract sections into {{TARGET_LANGUAGE}}.
+
+STRICT REQUIREMENTS:
+- Preserve section numbering and headings exactly as structured in the input (e.g., "1. SCOPE OF SERVICES" becomes the equivalent numbered heading in the target language, keeping the same number).
+- Preserve paragraph structure within each section's content.
+- Do NOT translate proper nouns that are clearly party names, unless they have an established localized form.
+- Do NOT translate anything inside square brackets, e.g. [Date], [Signature] — leave these as-is.
+- Keep monetary figures, dates, and section IDs unchanged.
+- Do not add commentary, notes, or explanations outside the JSON.
+
+INPUT SECTIONS (JSON):
+{{SECTIONS_JSON}}
+
+OUTPUT:
+Respond with valid JSON matching this exact schema and NOTHING else (no markdown fences, no extra text):
+{
+  "title": "Translated contract title",
+  "sections": [
+    { "id": "1", "title": "Translated heading", "content": "Translated content", "editable": true }
+  ]
+}
+`;
+
+export interface TranslatedContract {
+  title: string;
+  sections: { id: string; title: string; content: string; editable: boolean }[];
+  fullMarkdown: string;
+}
+
+export interface TranslateContractResult {
+  success: boolean;
+  data: TranslatedContract | null;
+  errorMessage: string | null;
+}
+
+/**
+ * Translates an already-generated contract's title + sections into the target
+ * regional language, then reconstructs fullMarkdown from the translated
+ * sections (never translates fullMarkdown independently) so both
+ * representations stay in sync.
+ */
+export async function translateContractSections(
+  title: string,
+  sections: { id: string; title: string; content: string; editable: boolean }[],
+  targetLanguage: LanguageCode
+): Promise<TranslateContractResult> {
+  const languageOption = getLanguageOption(targetLanguage);
+
+  if (!languageOption.requiresTranslation) {
+    return {
+      success: true,
+      data: {
+        title,
+        sections,
+        fullMarkdown: sectionsToMarkdown(title, sections),
+      },
+      errorMessage: null,
+    };
+  }
+
+  const systemInstruction = TRANSLATION_PROMPT
+    .replace('{{TARGET_LANGUAGE}}', languageOption.label)
+    .replace('{{SECTIONS_JSON}}', JSON.stringify({ title, sections }, null, 2));
+
+  const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
+    { role: 'system', content: 'You are a legal contract translator.' },
+    { role: 'user', content: systemInstruction },
+  ];
+
+  try {
+    const completion = await openrouter.chat.completions.create({
+      model: process.env.AI_MODEL!,
+      messages,
+      temperature: 0.2,
+    });
+
+    const responseText = completion.choices[0]?.message?.content || '';
+    const cleaned = responseText
+      .replace(/^```(?:json)?\s*/i, '')
+      .replace(/\s*```$/i, '')
+      .trim();
+
+    const parsed = JSON.parse(cleaned) as {
+      title: string;
+      sections: { id: string; title: string; content: string; editable: boolean }[];
+    };
+
+    if (!parsed.sections || parsed.sections.length === 0) {
+      return {
+        success: false,
+        data: null,
+        errorMessage: 'Translation returned no sections.',
+      };
+    }
+
+    return {
+      success: true,
+      data: {
+        title: parsed.title,
+        sections: parsed.sections,
+        fullMarkdown: sectionsToMarkdown(parsed.title, parsed.sections),
+      },
+      errorMessage: null,
+    };
+  } catch (error) {
+    console.error('Failed to translate/parse contract sections:', error);
+    return {
+      success: false,
+      data: null,
+      errorMessage: 'Translation service failed or returned invalid data.',
+    };
+  }
+}
+
+/** Deterministically rebuilds a markdown document from sections, so
+ * fullMarkdown always matches sections exactly — no independent generation. */
+function sectionsToMarkdown(
+  title: string,
+  sections: { id: string; title: string; content: string }[]
+): string {
+  const body = sections.map((s) => `## ${s.title}\n\n${s.content}`).join('\n\n');
+  return `# ${title}\n\n${body}`;
 }

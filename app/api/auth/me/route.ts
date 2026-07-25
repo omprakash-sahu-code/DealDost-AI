@@ -25,8 +25,17 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ user }, { status: 200 });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Auth /me Error:', error);
-    return NextResponse.json({ message: 'Invalid token or server error' }, { status: 401 });
+    return NextResponse.json(
+      {
+        message: 'Invalid token or server error',
+        error: {
+          code: 'AUTH_ERROR',
+          message: error.message || 'An unexpected authentication error occurred.',
+        },
+      },
+      { status: 401 }
+    );
   }
 }
