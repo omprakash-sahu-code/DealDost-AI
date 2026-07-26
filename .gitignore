@@ -8,3 +8,4 @@ out/
 .DS_Store
 brain.md 
 tsconfig.tsbuildinfo
+venv/
