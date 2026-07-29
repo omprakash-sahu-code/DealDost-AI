@@ -27,6 +27,17 @@ interface AuthContextType {
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+async function parseJsonResponse(res: Response) {
+  const text = await res.text();
+  if (!text) return {};
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    return { message: 'Unexpected server response. Please try again.' };
+  }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -35,8 +46,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const checkAuth = async () => {
     try {
       const res = await fetch('/api/auth/me');
-      if (res.ok) {
-        const data = await res.json();
+      const data = await parseJsonResponse(res);
+
+      if (res.ok && data?.user) {
         // Backend returns user with Mongoose _id, let's map it to id if needed
         const mappedUser = {
           ...data.user,
@@ -65,7 +77,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       body: JSON.stringify(data),
     });
 
-    const result = await res.json();
+    const result = await parseJsonResponse(res);
 
     if (!res.ok) {
       const error: any = new Error(result.message || 'Login failed');
@@ -88,7 +100,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       body: JSON.stringify(data),
     });
 
-    const result = await res.json();
+    const result = await parseJsonResponse(res);
 
     if (!res.ok) {
       const error: any = new Error(result.message || 'Registration failed');

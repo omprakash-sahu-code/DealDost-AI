@@ -7,7 +7,21 @@ import { signToken, AUTH_COOKIE_NAME } from '@/lib/auth';
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
+    let body;
+    try {
+      body = await req.json();
+    } catch {
+      return NextResponse.json(
+        {
+          message: 'Invalid JSON payload',
+          error: {
+            code: 'INVALID_JSON',
+            message: 'The request body must be valid JSON.',
+          },
+        },
+        { status: 400 }
+      );
+    }
     
     // 1. Validate Input
     const validatedData = registerSchema.safeParse(body);

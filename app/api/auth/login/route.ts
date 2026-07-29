@@ -29,7 +29,21 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const body = await req.json();
+    let body;
+    try {
+      body = await req.json();
+    } catch {
+      return NextResponse.json(
+        {
+          message: 'Invalid JSON payload',
+          error: {
+            code: 'INVALID_JSON',
+            message: 'The request body must be valid JSON.',
+          },
+        },
+        { status: 400 }
+      );
+    }
 
     // 1. Validate Input
     const validatedData = loginSchema.safeParse(body);

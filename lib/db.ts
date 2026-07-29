@@ -1,13 +1,7 @@
 import mongoose from 'mongoose';
 
-const MONGODB_URI = process.env.MONGODB_URI!;
+const MONGODB_URI = process.env.MONGODB_URI;
 const DB_NAME = process.env.DB_NAME || 'dealdost_ai';
-
-if (!MONGODB_URI) {
-  throw new Error(
-    'Please define the MONGODB_URI environment variable inside .env.local'
-  );
-}
 
 /**
  * Global is used here to maintain a cached connection across hot reloads
@@ -21,6 +15,10 @@ if (!cached) {
 }
 
 async function connectToDatabase() {
+  if (!MONGODB_URI) {
+    throw new Error('Missing MONGODB_URI environment variable. Please add it to your .env.local file.');
+  }
+
   if (cached.conn) {
     return cached.conn;
   }
