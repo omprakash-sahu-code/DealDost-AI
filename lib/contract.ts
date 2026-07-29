@@ -1,6 +1,6 @@
 // models/Contract.ts
 import mongoose, { Document, Model, Schema } from 'mongoose';
-import { IExtractedTerms } from './Conversation';
+import { IExtractedTerms } from '@/models/Conversation';
 import { LanguageCode, LANGUAGE_CODES } from '@/lib/languages';
 
 export interface IContractSection {
